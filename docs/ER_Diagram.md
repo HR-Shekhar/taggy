@@ -9,6 +9,7 @@ premium_status
 email_verified
 created_at
 updated_at
+is_deleted
 
 2. UserIdentity
 -------------
