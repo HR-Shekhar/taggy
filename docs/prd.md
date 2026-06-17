@@ -122,6 +122,173 @@ Inappropriate content.
 
 Admins review reports manually.
 
+### Additional MVP Features
+
+#### Roadmaps
+
+Each skill contains a structured roadmap.
+
+Users can:
+
+* View roadmap versions.
+* Follow milestones in sequence.
+* Track roadmap completion percentage.
+
+Roadmaps may evolve over time through community feedback while preserving previous versions.
+
+---
+
+#### Study Sessions
+
+Users can:
+
+* Start and stop study sessions.
+* Log study duration manually.
+* Add optional study notes.
+* View study history.
+
+Study sessions serve as the source of truth for progress analytics and streak calculations.
+
+---
+
+#### Analytics & Insights
+
+Users can view:
+
+* Total study hours.
+* Weekly study hours.
+* Monthly study hours.
+* Current streak.
+* Longest streak.
+* Milestone completion statistics.
+
+The purpose is to help users identify consistency patterns.
+
+---
+
+#### Search & Discovery
+
+Users can:
+
+* Search skills.
+* Search communities.
+* Search users by username.
+
+---
+
+#### Notifications
+
+Users receive notifications for:
+
+* Pod join requests.
+* Pod acceptance/rejection.
+* Milestone deadlines.
+* Roadmap updates.
+* Community announcements.
+
+Notification delivery channels are implementation-dependent.
+
+---
+
+### Additional Future Features
+
+#### Audio Rooms
+
+Communities and Pods may host live audio rooms.
+
+Possible use cases:
+
+* Study sessions.
+* Mock interviews.
+* Group discussions.
+* Q&A sessions.
+
+---
+
+#### Community-Driven Roadmaps
+
+Experienced learners can propose improvements to roadmaps.
+
+Supported proposal types:
+
+* Add milestone.
+* Edit milestone.
+* Remove milestone.
+* Reorder milestones.
+* Merge milestones.
+* Split milestones.
+
+Eligible community members can vote on proposals.
+
+---
+
+#### Achievements & Badges
+
+Users may earn badges for:
+
+* Study consistency.
+* Milestone completion.
+* Community contributions.
+* Helping other learners.
+
+Badges are motivational only and do not affect ranking.
+
+---
+
+#### Resource Collections
+
+Communities may curate:
+
+* Articles.
+* Videos.
+* Books.
+* Practice resources.
+* Project ideas.
+
+Resources can be attached to milestones.
+
+---
+
+#### Accountability Challenges
+
+Pods may create:
+
+* Weekly goals.
+* Monthly challenges.
+* Shared commitments.
+
+Challenge completion can be tracked collectively.
+
+---
+
+#### Public Profiles
+
+Users may optionally showcase:
+
+* Skills completed.
+* Milestones achieved.
+* Study statistics.
+* Projects built.
+
+Useful for portfolios and employability.
+
+---
+
+#### Mentorship Layer
+
+Experienced members may volunteer as mentors.
+
+Future capabilities:
+
+* Mentor discovery.
+* Mentor matching.
+* Office hours.
+* Skill guidance.
+
+```
+```
+
+
 8. Non-MVP Features
 These are intentionally postponed.
 Direct Messages

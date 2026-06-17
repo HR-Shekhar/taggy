@@ -1,267 +1,512 @@
-1. User
-----
-id         PK
-email      Unique
-name       Not null
-profile_picture_url
-bio
-premium_status
-email_verified
-created_at
-updated_at
-is_deleted
+# ERD.md
 
-2. UserIdentity
--------------
-id              PK
-user_id         FK
-provider        NULLABLE
-provider_user_id  NULLABLE
-password_hash     
-created_at
-updated_at
+# Taggy - Physical ER Diagram
 
-3. Skill
------
-id              PK
-name            NOT NULL
-slug            UNIQUE NOT NULL
-description     
-is_active
-created_at
-updated_at
+Legend
 
-4. Roadmap
---------
-id                  PK
-skill_id            FK
-current_version_id  FK
-created_at
-updated_at
+```text
+PK  = Primary Key
+FK  = Foreign Key
 
-5. RoadmapVersion
----------------
-id                                  PK
-roadmap_id                          FK
-version_number                      NOT NULL
-status (DRAFT, ACTIVE, ARCHIVED)
-generated_by (AI / ADMIN)
-published_at
-created_at
+1   = One
+N   = Many
 
-6. Milestone
-----------
-id                                  PK
-roadmap_version_id                  FK
-title                               NOT NULL
-description                 
-estimated_hours
-order_index                         NOT NULL UNIQUE
-difficulty
-created_at
-updated_at
+1 ───── N
+```
 
-7. UserSkill
------------
-id                                      PK
-user_id                                 FK
-skill_id                                FK
-roadmap_version_id                      FK
-status (ACTIVE, COMPLETED, PAUSED)
-started_at
-completed_at
+---
 
-8. UserMilestoneProgress
-----------------------
-id                                      PK
-user_skill_id                           FK
-milestone_id                            FK
-status (NOT_STARTED, IN_PROGRESS, COMPLETED, POSTPONED)
-completed_at
-postponed_until
+# 1. High Level Domain Diagram
 
-9. StudySession
---------------
-id                          PK
-user_id                     FK
-skill_id                    FK
-duration_minutes
-notes
-studied_at
-created_at
-
-10. Streak
---------
-id                          PK
-user_id                     FK
-current_streak              NOT NULL
-longest_streak              NOT NULL
-last_activity_date
-freeze_count                NOT NULL
-updated_at
-
-11. Pod
-----
-id                      PK
-name                    NOT NULL
-description             
-owner_id                FK
-skill_id                FK
-max_members
-created_at
-updated_at
-
-12. PodMembership
----------------
-id                      PK
-pod_id                  FK
-user_id                 FK
-status (PENDING, ACCEPTED, REJECTED)
-joined_at
-
-13. Community
------------
-id                  PK
-skill_id            FK
-name                NOTT NULL
-description
-created_at
-
-14. CommunityChannel
------------------
-id                  PK
-community_id        FK
-name                NOT NULL
-description
-created_at
-
-15. MilestoneProposal
-------------------
-id                      PK
-roadmap_version_id      FK
-proposer_id             FK
-proposal_type           
-title                   NOT NULL
-description
-status
-created_at
-reviewed_at
-reviewed_by
-
-Proposal types:
-ADD
-REMOVE
-EDIT
-REORDER
-MERGE
-SPLIT
-
-16. ProposalVote
---------------
-id                  PK
-proposal_id         FK
-user_id             FK
-vote_type
-created_at
-
-Vote types:
-UPVOTE
-DOWNVOTE
-
-17. Report
---------
-id                  PK
-reporter_id         FK
-target_type
-target_id           FK
-reason
-status
-created_at
-resolved_at
-resolved_by
-
-18. AudioRoom
------------
-id (UUID)                           PK
-room_type(POD, COMMUNITY_CHANNEL)   
-pod_id (nullable)                   FK
-community_channel_id (nullable)     FK
-host_id                             FK
-title                               NOT NULL
-description
-livekit_room_name
-status(SCHEDULED, ACTIVE, ENDED, CANCELLED)
-scheduled_start_time (nullable)
-actual_start_time (nullable)
-ended_at (nullable)
-max_participants
-created_at
-updated_at
-
-**Constraints**
-IF room_type = POD
-THEN pod_id IS NOT NULL
-
-IF room_type = COMMUNITY_CHANNEL
-THEN community_channel_id IS NOT NULL
-
-19. AudioRoomParticipant
-----------------------
-id                              PK
-audio_room_id                   FK
-user_id                         FK
-joined_at
-left_at
-duration_seconds
-role(HOST, SPEAKER, LISTENER)
+```text
+┌──────────────┐
+│    User      │
+└──────┬───────┘
+       │
+       │
+       ├────────────── Authentication
+       │
+       ├────────────── Learning Progress
+       │
+       ├────────────── Communities & Pods
+       │
+       ├────────────── Audio Rooms
+       │
+       └────────────── Governance
 
 
+┌──────────────┐
+│    Skill     │
+└──────┬───────┘
+       │
+       ├────────────── Roadmap
+       │
+       ├────────────── Community
+       │
+       ├────────────── Pods
+       │
+       └────────────── Study Sessions
+```
+
+---
+
+# 2. Authentication Domain
+
+```text
+┌─────────────────────────┐
+│ User                    │
+├─────────────────────────┤
+│ PK id                   │
+│ email                   │
+│ username                │
+│ name                    │
+│ premium_status          │
+│ email_verified          │
+└──────────┬──────────────┘
+           │ 1
+           │
+           │ N
+┌──────────▼──────────────┐
+│ UserIdentity            │
+├─────────────────────────┤
+│ PK id                   │
+│ FK user_id             │
+│ provider               │
+│ provider_user_id       │
+│ password_hash          │
+└─────────────────────────┘
+```
+
+---
+
+```text
+┌─────────────────────────┐
+│ User                    │
+└──────────┬──────────────┘
+           │ 1
+           │
+           │ N
+┌──────────▼──────────────┐
+│ UsernameHistory         │
+├─────────────────────────┤
+│ PK id                   │
+│ FK user_id             │
+│ username               │
+└─────────────────────────┘
+```
+
+---
+
+```text
+┌─────────────────────────┐
+│ EmailVerification       │
+├─────────────────────────┤
+│ PK id                   │
+│ email                   │
+│ username                │
+│ password_hash           │
+│ verification_token      │
+│ expires_at              │
+└─────────────────────────┘
+```
+
+Standalone temporary table.
+
+---
+
+# 3. Learning Domain
+
+```text
+┌─────────────────────────┐
+│ Skill                   │
+├─────────────────────────┤
+│ PK id                   │
+│ slug                    │
+│ name                    │
+└──────────┬──────────────┘
+           │ 1
+           │
+           │ 1
+┌──────────▼──────────────┐
+│ Roadmap                 │
+├─────────────────────────┤
+│ PK id                   │
+│ FK skill_id            │
+│ current_version_id      │
+└──────────┬──────────────┘
+           │ 1
+           │
+           │ N
+┌──────────▼──────────────┐
+│ RoadmapVersion          │
+├─────────────────────────┤
+│ PK id                   │
+│ FK roadmap_id          │
+│ version_number          │
+│ status                  │
+└──────────┬──────────────┘
+           │ 1
+           │
+           │ N
+┌──────────▼──────────────┐
+│ Milestone               │
+├─────────────────────────┤
+│ PK id                   │
+│ FK roadmap_version_id  │
+│ order_index             │
+└─────────────────────────┘
+```
+
+---
+
+# 4. Learning Progress Domain
+
+```text
+┌─────────────────────────┐
+│ User                    │
+└──────────┬──────────────┘
+           │
+           │ N
+           │
+┌──────────▼──────────────┐
+│ UserSkill               │
+├─────────────────────────┤
+│ PK id                   │
+│ FK user_id             │
+│ FK skill_id            │
+│ FK roadmap_version_id  │
+│ status                  │
+└──────────┬──────────────┘
+           │
+           │ 1
+           │
+           │ N
+┌──────────▼──────────────┐
+│ UserMilestoneProgress   │
+├─────────────────────────┤
+│ PK id                   │
+│ FK user_skill_id       │
+│ FK milestone_id        │
+│ status                  │
+└─────────────────────────┘
+```
+
+---
+
+```text
+┌─────────────┐         ┌─────────────┐
+│ User        │         │ Skill       │
+└──────┬──────┘         └──────┬──────┘
+       │ N                     │ N
+       │                       │
+       ▼                       ▼
+┌─────────────────────────────┐
+│ StudySession                │
+├─────────────────────────────┤
+│ PK id                       │
+│ FK user_id                 │
+│ FK skill_id                │
+│ duration_minutes           │
+│ studied_at                 │
+└─────────────────────────────┘
+```
+
+---
+
+```text
+┌─────────────┐
+│ User        │
+└──────┬──────┘
+       │ 1
+       │
+       │ 1
+┌──────▼──────┐
+│ Streak      │
+├─────────────┤
+│ PK id       │
+│ FK user_id  │
+│ current     │
+│ longest     │
+└─────────────┘
+```
+
+---
+
+# 5. Community & Pods Domain
+
+```text
+┌─────────────┐
+│ Skill       │
+└──────┬──────┘
+       │ 1
+       │
+       │ 1
+┌──────▼────────────┐
+│ Community         │
+├───────────────────┤
+│ PK id             │
+│ FK skill_id       │
+└──────┬────────────┘
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ CommunityChannel  │
+├───────────────────┤
+│ PK id             │
+│ FK community_id   │
+└───────────────────┘
+```
+
+---
+
+```text
+┌─────────────┐
+│ Skill       │
+└──────┬──────┘
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ Pod               │
+├───────────────────┤
+│ PK id             │
+│ public_id UUID    │
+│ FK owner_id       │
+│ FK skill_id       │
+└──────┬────────────┘
+       │
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ PodMembership     │
+├───────────────────┤
+│ PK id             │
+│ FK pod_id         │
+│ FK user_id        │
+│ status            │
+└───────────────────┘
+```
+
+---
+
+```text
+User
+  │
+  │ 1
+  │
+  │ N
+  ▼
+Pod
+
+(owner relationship)
+```
+
+---
+
+# 6. Audio Domain
+
+```text
+┌──────────────┐
+│ User         │
+└──────┬───────┘
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ AudioRoom         │
+├───────────────────┤
+│ PK id             │
+│ public_id UUID    │
+│ FK host_id        │
+│ room_type         │
+│ pod_id            │
+│ channel_id        │
+└──────┬────────────┘
+       │
+       │ 1
+       │
+       │ N
+┌──────▼──────────────────┐
+│ AudioRoomParticipant    │
+├─────────────────────────┤
+│ PK id                   │
+│ FK audio_room_id       │
+│ FK user_id             │
+│ role                    │
+└─────────────────────────┘
+```
+
+---
+
+```text
+Pod (1)
+   │
+   │ N
+   ▼
+AudioRoom
+
+
+OR
+
+
+CommunityChannel (1)
+   │
+   │ N
+   ▼
+AudioRoom
+```
+
+---
+
+# 7. Governance Domain
+
+```text
+┌────────────────────┐
+│ RoadmapVersion     │
+└─────────┬──────────┘
+          │ 1
+          │
+          │ N
+┌─────────▼──────────┐
+│ MilestoneProposal  │
+├────────────────────┤
+│ PK id              │
+│ FK roadmap_version │
+│ FK proposer_id     │
+└─────────┬──────────┘
+          │ 1
+          │
+          │ N
+┌─────────▼──────────┐
+│ ProposalVote       │
+├────────────────────┤
+│ PK id              │
+│ FK proposal_id     │
+│ FK user_id         │
+└────────────────────┘
+```
+
+---
+
+```text
+User (1)
+   │
+   │ N
+   ▼
+MilestoneProposal
+
+
+User (1)
+   │
+   │ N
+   ▼
+ProposalVote
+```
+
+---
+
+# 8. Moderation Domain
+
+```text
+┌─────────────┐
+│ User        │
+└──────┬──────┘
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ Report            │
+├───────────────────┤
+│ PK id             │
+│ reporter_id       │
+│ target_type       │
+│ target_id         │
+│ resolved_by       │
+└───────────────────┘
+```
+---
+
+# 10. Notification Domain
+
+┌─────────────┐
+│ User        │
+└──────┬──────┘
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ Notification      │
+├───────────────────┤
+│ PK id             │
+│ FK user_id        │
+│ type              │
+│ is_read           │
+└───────────────────┘
+---
+
+# 10. Notification Domain
+
+┌─────────────┐
+│ User        │
+└──────┬──────┘
+       │ 1
+       │
+       │ N
+┌──────▼────────────┐
+│ Notification      │
+├───────────────────┤
+│ PK id             │
+│ FK user_id        │
+│ type              │
+│ is_read           │
+└───────────────────┘
+
+---
+
+# Updated Core Relationship Summary
 
 User
-├──< UserIdentity
-├──< UserSkill >──────── Skill
-├──< StudySession >───── Skill
-├─── (1:1) Streak
-├──< PodMembership >──── Pod >──── Skill
-├──< ProposalVote >───── MilestoneProposal
-├──< AudioRoomParticipant >──── AudioRoom
-├──< Report
-├──< hosts >──────────── AudioRoom
-└──< MilestoneProposal
-
+├── UserIdentity
+├── UsernameHistory
+├── UserSkill
+├── StudySession
+├── Streak
+├── PodMembership
+├── AudioRoomParticipant
+├── AudioRoom (host)
+├── MilestoneProposal
+├── ProposalVote
+├── Report
+├── Message (author)
+└── Notification
 
 Skill
-├──── (1:1) Roadmap
-├──── (1:1) Community
-├────< Pod
-└────< UserSkill
-
+├── Roadmap
+├── Community
+├── Pod
+├── UserSkill
+└── StudySession
 
 Roadmap
-└──< RoadmapVersion
-        │
-        ├──< Milestone
-        │       │
-        │       └──< UserMilestoneProgress >── UserSkill
-        │
-        └──< MilestoneProposal
-                    │
-                    └──< ProposalVote
-
+└── RoadmapVersion
+├── Milestone
+├── UserSkill
+└── MilestoneProposal
 
 Community
-└──< CommunityChannel
-            │
-            └──< AudioRoom
-
+└── CommunityChannel
+├── AudioRoom
+└── Message
 
 Pod
-├──< PodMembership
-└──< AudioRoom
-
+├── PodMembership
+├── AudioRoom
+└── Message
 
 AudioRoom
-├──> Pod (nullable)
-├──> CommunityChannel (nullable)
-├──> User (host)
-└──< AudioRoomParticipant >── User
+└── AudioRoomParticipant
+
+MilestoneProposal
+└── ProposalVote
