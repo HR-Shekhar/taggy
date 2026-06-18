@@ -11,12 +11,13 @@ Represents a Taggy user.
 | Column              | Type         | Constraints            |
 | ------------------- | ------------ | ---------------------- |
 | id                  | BIGSERIAL    | PK                     |
-| email               | VARCHAR(255) | UNIQUE NOT NULL        |
-| username            | VARCHAR(30)  | UNIQUE NOT NULL        |
-| name                | VARCHAR(255) | NOT NULL               |
+| public_id           | UUID         | UNIQUE NOT NULL        |
+| email               | CITEXT       | UNIQUE NOT NULL        |
+| username            | CITEXT       | UNIQUE NOT NULL        |
+| name                | TEXT         | NOT NULL               |
 | profile_picture_url | TEXT         | NULL                   |
 | bio                 | TEXT         | NULL                   |
-| premium_status      | BOOLEAN      | NOT NULL DEFAULT FALSE |
+| premium_status      | ENUM         | NOT NULL DEFAULT FREE  |
 | email_verified      | BOOLEAN      | NOT NULL DEFAULT FALSE |
 | is_deleted          | BOOLEAN      | NOT NULL DEFAULT FALSE |
 | deleted_at          | TIMESTAMPTZ  | NULL                   |

@@ -1,0 +1,37 @@
+version: '3'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list-all
+
+  run:
+    desc: Run API server
+    cmds:
+      - go run ./cmd/api
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  tidy:
+    desc: Tidy dependencies
+    cmds:
+      - go mod tidy
+
+  build:
+    desc: Build application
+    cmds:
+      - go build -o bin/taggy ./cmd/api
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rmdir /s /q binF[K]
