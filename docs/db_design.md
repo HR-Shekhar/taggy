@@ -50,15 +50,15 @@ Represents authentication providers linked to a user.
 
 ### Columns
 
-| Column           | Type         | Constraints            |
-| ---------------- | ------------ | ---------------------- |
-| id               | BIGSERIAL    | PK                     |
-| user_id          | BIGINT       | FK → User(id)          |
-| provider         | VARCHAR(50)  | NOT NULL               |
-| provider_user_id | VARCHAR(255) | NULL                   |
-| password_hash    | TEXT         | NULL                   |
-| created_at       | TIMESTAMPTZ  | NOT NULL DEFAULT NOW() |
-| updated_at       | TIMESTAMPTZ  | NOT NULL DEFAULT NOW() |
+| Column           | Type         | Constraints             |
+| ---------------- | ------------ | ----------------------- |
+| id               | BIGSERIAL    | PK                      |
+| user_id          | BIGINT       | FK → User(id)           |
+| provider         | ENUM         | NOT NULL DEFAULT 'local'|
+| provider_user_id | VARCHAR(255) | NULL                    |
+| password_hash    | TEXT         | NULL                    |
+| created_at       | TIMESTAMPTZ  | NOT NULL DEFAULT NOW()  |
+| updated_at       | TIMESTAMPTZ  | NOT NULL DEFAULT NOW()  |
 
 ### Provider Values
 
@@ -81,35 +81,7 @@ GOOGLE → provider_user_id required.
 
 ---
 
-## EmailVerification
 
-### Purpose
-
-Temporary storage for email signups before verification.
-
-### Columns
-
-| Column             | Type         | Constraints            |
-| ------------------ | ------------ | ---------------------- |
-| id                 | BIGSERIAL    | PK                     |
-| email              | VARCHAR(255) | NOT NULL               |
-| username           | VARCHAR(30)  | NOT NULL               |
-| name               | VARCHAR(255) | NOT NULL               |
-| password_hash      | TEXT         | NOT NULL               |
-| verification_token | TEXT         | UNIQUE NOT NULL        |
-| expires_at         | TIMESTAMPTZ  | NOT NULL               |
-| created_at         | TIMESTAMPTZ  | NOT NULL DEFAULT NOW() |
-
-### Constraints
-
-* Verification tokens expire.
-* Email and username are NOT reserved until successful verification.
-
-### Delete Behavior
-
-* Hard delete after verification or expiration.
-
----
 
 ## UsernameHistory
 
@@ -762,7 +734,7 @@ Rich Text Formatting
 ```
 ---
 
-# Notification
+## Notification
 
 ### Purpose
 
