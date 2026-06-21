@@ -1,4 +1,5 @@
 -- +goose Up
+
 CREATE TABLE skill (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -15,6 +16,14 @@ CREATE TYPE current_status AS ENUM (
     'ARCHIVED'
 );
 
+CREATE TABLE roadmap (
+    id BIGSERIAL PRIMARY KEY,
+    current_version_id BIGINT,
+    skill_id BIGINT NOT NULL REFERENCES skill(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE roadmap_version (
     id BIGSERIAL PRIMARY KEY,
     roadmap_id BIGINT references roadmap(id),
@@ -25,16 +34,13 @@ CREATE TABLE roadmap_version (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE roadmap (
-    id BIGSERIAL PRIMARY KEY,
-    skill_id BIGINT NOT NULL REFERENCES skill(id),
-    current_version_id BIGINT REFERENCES roadmap_version(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+ALTER TABLE roadmap 
+ADD CONSTRAINT fk_roadmap_current_version
+FOREIGN KEY (current_version_id)
+REFERENCES roadmap_version(id);
 
 CREATE TABLE milestone (
-    id BIGSERIAL PRIMARY KEY
+    id BIGSERIAL PRIMARY KEY,
     roadmap_version_id BIGINT REFERENCES roadmap_version(id) ON DELETE RESTRICT,
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -44,8 +50,68 @@ CREATE TABLE milestone (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT estimated_hours_check CHECK (estimated_hours > 0),
-    CONSTRAINT duplication_check UNIQUE(roadmap_version_id, order_index)
+    CONSTRAINT unique_milestone_order UNIQUE(roadmap_version_id, order_index)
+);
+
+CREATE TYPE status_value AS ENUM (
+    'ACTIVE',
+    'COMPLETE'
+);
+
+CREATE TABLE userskill (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES user(id) ON DELETE CASCADE,
+    skill_id BIGINT REFERENCES skill(id) ON DELETE RESTRICT,
+    roadmap_version_id BIGINT REFERENCES roadmap_version(id),
+    status status_value NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ 
+);
+
+CREATE TYPE progress_status AS ENUM (
+    'NOT_STARTED',
+    'IN_PROGRESS',
+    'COMPLETED',
+    'POSTPONED'
+);
+
+CREATE TABLE usermilestoneprogress (
+    id BIGSERIAL PRIMARY KEY,
+    user_skill_id BIGINT REFERENCES userskill(id) ON DELETE CASCADE,
+    milestone_id BIGINT REFERENCES milestone(id) ON DELETE CASCADE,
+    status progress_status NOT NULL,
+    completed_at TIMESTAMPTZ,
+    postponed_until TIMESTAMPTZ,
+    CONSTRAINT unique_user_milestone_progress UNIQUE (user_skill_id, milestone_id)
+);
+
+CREATE TABLE study_session (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES user(id) ON DELETE CASCADE,
+    skill_id BIGINT REFERENCES skill(id),
+    duration_minutes INTEGER NOT NULL,
+    notes TEXT,
+    studied_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT duration_minutes_check CHECK (duration_minutes > 0)
+);
+
+CREATE TABLE streak (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE REFERENCES user(id) ON DELETE CASCADE,
+    current_streak INTEGER NOT NULL DEFAULT 0,
+    longest_streak INTEGER NOT NULL DEFAULT 0,
+    last_activity_date DATE NULL,
+    freeze_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT invalid_streak_check CHECK(current_streak >= 0),
+    CONSTRAINT positive_value_check CHECK(longest_streak >= 0),
+    CONSTRAINT invalid_freeze_check CHECK(freeze_count >= 0)
 );
 
 -- +goose Down
 DROP TABLE skill;
+DROP TABLE roadmap;
+DROP TABLE roadmap_version;
+DROP TABLE milestone;
+

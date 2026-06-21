@@ -7,7 +7,7 @@ CREATE TYPE subscription_tier AS ENUM (
     'PREMIUM'
 );
 
-CREATE TABLE users (
+CREATE TABLE user (
     id BIGSERIAL PRIMARY KEY,
     public_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     email CITEXT NOT NULL UNIQUE,
@@ -41,7 +41,7 @@ CREATE TYPE provider_name AS ENUM (
 
 CREATE TABLE user_identity (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
     provider provider_name NOT NULL DEFAULT 'local',
     provider_user_id VARCHAR(255) NULL,
     password_hash TEXT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE user_identity (
 
 CREATE TABLE username_history (
     id  BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
     username CITEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT username_length_check

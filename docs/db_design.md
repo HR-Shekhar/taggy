@@ -252,7 +252,7 @@ Represents a user's enrollment in a skill.
 | user_id            | BIGINT      | FK → User(id)           |
 | skill_id           | BIGINT      | FK → Skill(id)          |
 | roadmap_version_id | BIGINT      | FK → RoadmapVersion(id) |
-| status             | VARCHAR(20) | NOT NULL                |
+| status             | ENUM        | NOT NULL                |
 | started_at         | TIMESTAMPTZ | NOT NULL DEFAULT NOW()  |
 | completed_at       | TIMESTAMPTZ | NULL                    |
 
