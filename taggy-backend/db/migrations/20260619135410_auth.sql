@@ -7,7 +7,7 @@ CREATE TYPE subscription_tier AS ENUM (
     'PREMIUM'
 );
 
-CREATE TABLE user (
+CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     public_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     email CITEXT NOT NULL UNIQUE,
@@ -22,7 +22,7 @@ CREATE TABLE user (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT username_length_check
+    CONSTRAINT users_username_length_check
         CHECK (
             length(username) BETWEEN 3 AND 30
         ),
@@ -41,7 +41,7 @@ CREATE TYPE provider_name AS ENUM (
 
 CREATE TABLE user_identity (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider provider_name NOT NULL DEFAULT 'local',
     provider_user_id VARCHAR(255) NULL,
     password_hash TEXT NULL,
@@ -59,19 +59,20 @@ CREATE TABLE user_identity (
 
 CREATE TABLE username_history (
     id  BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     username CITEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT username_length_check
+    CONSTRAINT username_history_username_length_check
         CHECK (
             length(username) BETWEEN 3 AND 30
         )
 );
 
 -- +goose Down
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS user_identity;
 DROP TABLE IF EXISTS username_history;
+DROP TABLE IF EXISTS user_identity;
+DROP TABLE IF EXISTS users;
+
 
 DROP TYPE IF EXISTS subscription_tier;  
 DROP TYPE IF EXISTS provider_name;  
