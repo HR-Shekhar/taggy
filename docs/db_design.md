@@ -565,7 +565,7 @@ Tracks pod membership.
 | id         | BIGSERIAL   | PK                     |
 | pod_id     | BIGINT      | NOT NULL FK → Pod(id)  |
 | user_id    | BIGINT      | NOT NULL FK → User(id) |
-| status     | VARCHAR(20) | NOT NULL               |
+| status     | ENUM        | NOT NULL               |
 | joined_at  | TIMESTAMPTZ | NULL                   |
 | created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 

@@ -1,4 +1,4 @@
-create migrations file: goose -dir db/migrations create auth sql
+create migrations file: goose -dir db/migrations create name sql
 
 migrations up: goose -dir db/migrations postgres "postgres://postgres:password@localhost:5431/taggy?sslmode=disable" up
 
