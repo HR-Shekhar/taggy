@@ -1,0 +1,37 @@
+-- +goose Up
+CREATE TYPE notification_type AS ENUM (
+	'POD_JOIN_REQUEST',
+	'POD_JOIN_ACCEPTED',
+	'POD_JOIN_REJECTED',
+	'POD_MEMBER_REMOVED',
+	'MILESTONE_DUE',
+	'MILESTONE_COMPLETED',
+	'ROADMAP_UPDATED',
+	'PROPOSAL_APPROVED',
+	'PROPOSAL_REJECTED',
+	'COMMUNITY_ANNOUNCEMENT',
+	'SYSTEM'
+);
+
+CREATE TABLE notification (
+	id BIGSERIAL PRIMARY KEY,
+	user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	type notification_type NOT NULL,
+    entity_type VARCHAR(50) NULL,
+    entity_id BIGINT NULL,
+	title VARCHAR(255) NOT NULL,
+	body TEXT NOT NULL,
+	is_read BOOLEAN NOT NULL DEFAULT FALSE,
+	read_at TIMESTAMPTZ NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	CONSTRAINT notification_read_state CHECK (
+		(is_read = FALSE AND read_at IS NULL)
+		OR (is_read = TRUE AND read_at IS NOT NULL)
+	)
+);
+
+
+-- +goose Down
+DROP TABLE IF EXISTS notification;
+DROP TYPE IF EXISTS notification_type;
+
