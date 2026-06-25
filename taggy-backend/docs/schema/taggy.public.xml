@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<database name="taggy" schema="public" type="PostgreSQL - 18.4 (Debian 18.4-1.pgdg13+1)">
+   <sequences>
+      <sequence increment="1" name="audio_room_id_seq" startValue="1"/>
+      <sequence increment="1" name="audio_room_participant_id_seq" startValue="1"/>
+      <sequence increment="1" name="community_channel_id_seq" startValue="1"/>
+      <sequence increment="1" name="community_id_seq" startValue="1"/>
+      <sequence increment="1" name="message_id_seq" startValue="1"/>
+      <sequence increment="1" name="milestone_proposal_id_seq" startValue="1"/>
+      <sequence increment="1" name="milestones_id_seq" startValue="1"/>
+      <sequence increment="1" name="notification_id_seq" startValue="1"/>
+      <sequence increment="1" name="pod_membership_id_seq" startValue="1"/>
+      <sequence increment="1" name="pods_id_seq" startValue="1"/>
+      <sequence increment="1" name="proposal_vote_id_seq" startValue="1"/>
+      <sequence increment="1" name="report_id_seq" startValue="1"/>
+      <sequence increment="1" name="roadmap_version_id_seq" startValue="1"/>
+      <sequence increment="1" name="roadmaps_id_seq" startValue="1"/>
+      <sequence increment="1" name="skills_id_seq" startValue="1"/>
+      <sequence increment="1" name="streak_id_seq" startValue="1"/>
+      <sequence increment="1" name="study_session_id_seq" startValue="1"/>
+      <sequence increment="1" name="user_identity_id_seq" startValue="1"/>
+      <sequence increment="1" name="user_milestone_progress_id_seq" startValue="1"/>
+      <sequence increment="1" name="username_history_id_seq" startValue="1"/>
+      <sequence increment="1" name="users_id_seq" startValue="1"/>
+      <sequence increment="1" name="userskill_id_seq" startValue="1"/>
+   </sequences>
+   <tables>
+      <table name="audio_room" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('audio_room_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="audio_room_id" foreignKey="audio_room_participant_audio_room_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="audio_room_participant"/>
+         </column>
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="1" name="public_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="room_type" nullable="false" remarks="" size="2147483647" type="audio_room_type" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="pod_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="audio_room_pod_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="pods"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="community_channel_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="audio_room_community_channel_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="community_channel"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="host_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="audio_room_host_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="title" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="livekit_room_name" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="status" nullable="false" remarks="" size="2147483647" type="audio_room_status" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="10" name="scheduled_start_time" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="11" name="actual_start_time" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="12" name="ended_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="13" name="max_participants" nullable="true" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="14" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="15" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="audio_room_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="audio_room_livekit_room_name_key" unique="true">
+            <column ascending="true" name="livekit_room_name"/>
+         </index>
+         <index name="audio_room_public_id_key" unique="true">
+            <column ascending="true" name="public_id"/>
+         </index>
+         <checkConstraint constraint="(((room_type = 'POD'::audio_room_type) AND (pod_id IS NOT NULL) AND (community_channel_id IS NULL)) OR ((room_type = 'COMMUNITY_CHANNEL'::audio_room_type) AND (community_channel_id IS NOT NULL) AND (pod_id IS NULL)))" name="audio_room_target_check"/>
+         <checkConstraint constraint="((max_participants IS NULL) OR (max_participants &gt; 0))" name="minimum_participant_value_check"/>
+      </table>
+      <table name="audio_room_participant" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('audio_room_participant_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="audio_room_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="audio_room_participant_audio_room_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="audio_room"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="audio_room_participant_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="3" name="joined_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="left_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="duration_seconds" nullable="true" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="role" nullable="false" remarks="" size="2147483647" type="audio_room_participant_role" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="audio_room_participant_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="audio_room_participant_unique" unique="true">
+            <column ascending="true" name="audio_room_id"/>
+            <column ascending="true" name="user_id"/>
+         </index>
+         <checkConstraint constraint="((duration_seconds IS NULL) OR (duration_seconds &gt;= 0))" name="audio_room_participant_duration_check"/>
+      </table>
+      <table name="community" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('community_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="community_id" foreignKey="community_channel_community_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="community_channel"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="skill_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="community_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="skills"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="name" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="4" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="community_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="community_skill_id_key" unique="true">
+            <column ascending="true" name="skill_id"/>
+         </index>
+      </table>
+      <table name="community_channel" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('community_channel_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="community_channel_id" foreignKey="audio_room_community_channel_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="audio_room"/>
+            <child column="community_channel_id" foreignKey="message_community_channel_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="message"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="community_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="community_channel_community_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="community"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="name" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="4" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="community_channel_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="duplicate_channel_name" unique="true">
+            <column ascending="true" name="community_id"/>
+            <column ascending="true" name="name"/>
+         </index>
+      </table>
+      <table name="goose_db_version" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="version_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="is_applied" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="3" name="tstamp" nullable="false" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="goose_db_version_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+      </table>
+      <table name="message" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('message_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="author_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="message_author_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="community_channel_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="message_community_channel_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="community_channel"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="pod_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="message_pod_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="pods"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="content" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="edited_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="message_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <checkConstraint constraint="(((community_channel_id IS NOT NULL) AND (pod_id IS NULL)) OR ((community_channel_id IS NULL) AND (pod_id IS NOT NULL)))" name="message_one_location"/>
+      </table>
+      <table name="milestone_proposal" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('milestone_proposal_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="proposal_id" foreignKey="proposal_vote_proposal_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="proposal_vote"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="roadmap_version_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="milestone_proposal_roadmap_version_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="roadmap_version"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="proposer_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="milestone_proposal_proposer_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="proposal_type" nullable="false" remarks="" size="2147483647" type="milestone_proposal_type" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="title" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="'PENDING'::milestone_proposal_status" digits="0" id="6" name="status" nullable="false" remarks="" size="2147483647" type="milestone_proposal_status" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="7" name="reviewed_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="reviewed_by" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="milestone_proposal_reviewed_by_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="9" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="10" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="milestone_proposal_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <checkConstraint constraint="((status &lt;&gt; ALL (ARRAY['APPROVED'::milestone_proposal_status, 'REJECTED'::milestone_proposal_status])) OR (reviewed_by IS NOT NULL))" name="milestone_proposal_review_required"/>
+         <checkConstraint constraint="(((reviewed_by IS NULL) AND (reviewed_at IS NULL)) OR (reviewed_by IS NOT NULL))" name="milestone_proposal_review_state"/>
+         <checkConstraint constraint="(((reviewed_by IS NULL) AND (reviewed_at IS NULL)) OR ((reviewed_by IS NOT NULL) AND (reviewed_at IS NOT NULL)))" name="valid_review_check"/>
+      </table>
+      <table name="milestones" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('milestones_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="milestone_id" foreignKey="user_milestone_progress_milestone_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="user_milestone_progress"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="roadmap_version_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="milestones_roadmap_version_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="roadmap_version"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="title" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="estimated_hours" nullable="true" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="order_index" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="difficulty" nullable="true" remarks="" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="7" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="8" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="milestones_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="unique_milestone_order" unique="true">
+            <column ascending="true" name="roadmap_version_id"/>
+            <column ascending="true" name="order_index"/>
+         </index>
+         <checkConstraint constraint="(estimated_hours &gt; 0)" name="estimated_hours_check"/>
+      </table>
+      <table name="notification" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('notification_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="notification_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="type" nullable="false" remarks="" size="2147483647" type="notification_type" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="entity_type" nullable="true" remarks="" size="50" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="entity_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="title" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="body" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="7" name="is_read" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="8" name="read_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="9" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="notification_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <checkConstraint constraint="(((is_read = false) AND (read_at IS NULL)) OR ((is_read = true) AND (read_at IS NOT NULL)))" name="notification_read_state"/>
+      </table>
+      <table name="pod_membership" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('pod_membership_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="pod_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="pod_membership_pod_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="pods"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="pod_membership_user_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="status" nullable="false" remarks="" size="2147483647" type="user_pod_membership_status" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="joined_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="pod_membership_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="user_joining_same_pod" unique="true">
+            <column ascending="true" name="pod_id"/>
+            <column ascending="true" name="user_id"/>
+         </index>
+      </table>
+      <table name="pods" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('pods_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="pod_id" foreignKey="audio_room_pod_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="audio_room"/>
+            <child column="pod_id" foreignKey="message_pod_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="message"/>
+            <child column="pod_id" foreignKey="pod_membership_pod_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="pod_membership"/>
+         </column>
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="1" name="public_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="slug" nullable="false" remarks="" size="2147483647" type="citext" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="name" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="owner_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="pods_owner_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="skill_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="pods_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="skills"/>
+         </column>
+         <column autoUpdated="false" defaultValue="7" digits="0" id="7" name="max_members" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="8" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="9" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="pods_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="pods_public_id_key" unique="true">
+            <column ascending="true" name="public_id"/>
+         </index>
+         <index name="pods_slug_key" unique="true">
+            <column ascending="true" name="slug"/>
+         </index>
+         <checkConstraint constraint="((max_members &gt; 0) AND (max_members &lt;= 7))" name="valid_number_of_members"/>
+      </table>
+      <table name="proposal_vote" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('proposal_vote_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="proposal_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="proposal_vote_proposal_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="milestone_proposal"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="proposal_vote_user_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="vote_type" nullable="false" remarks="" size="2147483647" type="proposal_vote_type" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="4" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="proposal_vote_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="proposal_vote_unique" unique="true">
+            <column ascending="true" name="proposal_id"/>
+            <column ascending="true" name="user_id"/>
+         </index>
+      </table>
+      <table name="report" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('report_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="reporter_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="report_reporter_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="target_type" nullable="false" remarks="" size="2147483647" type="report_target_type" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="target_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="reason" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="'OPEN'::report_status" digits="0" id="5" name="status" nullable="false" remarks="" size="2147483647" type="report_status" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="resolved_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="resolved_by" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="report_resolved_by_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="8" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="9" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="report_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <checkConstraint constraint="(((resolved_by IS NULL) AND (resolved_at IS NULL)) OR (resolved_by IS NOT NULL))" name="report_resolution_state"/>
+         <checkConstraint constraint="(((resolved_by IS NULL) AND (resolved_at IS NULL)) OR ((resolved_by IS NOT NULL) AND (resolved_at IS NOT NULL)))" name="valid_report_resolution"/>
+      </table>
+      <table name="roadmap_version" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('roadmap_version_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="roadmap_version_id" foreignKey="milestone_proposal_roadmap_version_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="milestone_proposal"/>
+            <child column="roadmap_version_id" foreignKey="milestones_roadmap_version_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="milestones"/>
+            <child column="current_version_id" foreignKey="fk_roadmap_current_version" implied="false" onDeleteCascade="false" schema="public" table="roadmaps"/>
+            <child column="roadmap_version_id" foreignKey="userskill_roadmap_version_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="userskill"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="roadmap_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="roadmap_version_roadmap_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="roadmaps"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="version_number" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="status" nullable="false" remarks="" size="2147483647" type="current_status" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="generated_by" nullable="false" remarks="" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="published_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="roadmap_version_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+      </table>
+      <table name="roadmaps" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('roadmaps_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="roadmap_id" foreignKey="roadmap_version_roadmap_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="roadmap_version"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="current_version_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="fk_roadmap_current_version" implied="false" onDeleteCascade="false" schema="public" table="roadmap_version"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="skill_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="roadmaps_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="skills"/>
+         </column>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="3" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="4" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="roadmaps_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+      </table>
+      <table name="skills" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('skills_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="skill_id" foreignKey="community_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="community"/>
+            <child column="skill_id" foreignKey="pods_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="pods"/>
+            <child column="skill_id" foreignKey="roadmaps_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="roadmaps"/>
+            <child column="skill_id" foreignKey="study_session_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="study_session"/>
+            <child column="skill_id" foreignKey="userskill_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="userskill"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="name" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="slug" nullable="false" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="description" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="true" digits="0" id="4" name="is_active" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="skills_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="skills_slug_key" unique="true">
+            <column ascending="true" name="slug"/>
+         </index>
+      </table>
+      <table name="streak" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('streak_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="streak_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="2" name="current_streak" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="3" name="longest_streak" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="last_activity_date" nullable="true" remarks="" size="13" type="date" typeCode="91"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="5" name="freeze_count" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="streak_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="streak_user_id_key" unique="true">
+            <column ascending="true" name="user_id"/>
+         </index>
+         <checkConstraint constraint="(freeze_count &gt;= 0)" name="invalid_freeze_check"/>
+         <checkConstraint constraint="(current_streak &gt;= 0)" name="invalid_streak_check"/>
+         <checkConstraint constraint="(longest_streak &gt;= 0)" name="positive_value_check"/>
+      </table>
+      <table name="study_session" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('study_session_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="study_session_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="skill_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="study_session_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="skills"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="duration_minutes" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="notes" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="studied_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="study_session_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <checkConstraint constraint="(duration_minutes &gt; 0)" name="duration_minutes_check"/>
+      </table>
+      <table name="user_identity" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('user_identity_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="user_identity_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="'local'::provider_name" digits="0" id="2" name="provider" nullable="false" remarks="" size="2147483647" type="provider_name" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="provider_user_id" nullable="true" remarks="" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="password_hash" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="user_identity_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="unique_provider_identity" unique="true">
+            <column ascending="true" name="provider"/>
+            <column ascending="true" name="provider_user_id"/>
+         </index>
+         <index name="unique_user_provider" unique="true">
+            <column ascending="true" name="user_id"/>
+            <column ascending="true" name="provider"/>
+         </index>
+         <checkConstraint constraint="(((provider = 'google'::provider_name) AND (provider_user_id IS NOT NULL)) OR ((provider = 'local'::provider_name) AND (password_hash IS NOT NULL)))" name="identity_provider_check"/>
+      </table>
+      <table name="user_milestone_progress" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('user_milestone_progress_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_skill_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="user_milestone_progress_user_skill_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="userskill"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="milestone_id" nullable="true" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="user_milestone_progress_milestone_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="milestones"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="status" nullable="false" remarks="" size="2147483647" type="progress_status" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="completed_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="postponed_until" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="user_milestone_progress_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="unique_user_milestone_progress" unique="true">
+            <column ascending="true" name="user_skill_id"/>
+            <column ascending="true" name="milestone_id"/>
+         </index>
+      </table>
+      <table name="username_history" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('username_history_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="username_history_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="username" nullable="false" remarks="" size="2147483647" type="citext" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="3" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="username_history_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="username_history_username_key" unique="true">
+            <column ascending="true" name="username"/>
+         </index>
+         <checkConstraint constraint="((length((username)::text) &gt;= 3) AND (length((username)::text) &lt;= 30))" name="username_history_username_length_check"/>
+      </table>
+      <table name="users" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('users_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="host_id" foreignKey="audio_room_host_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="audio_room"/>
+            <child column="user_id" foreignKey="audio_room_participant_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="audio_room_participant"/>
+            <child column="author_id" foreignKey="message_author_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="message"/>
+            <child column="proposer_id" foreignKey="milestone_proposal_proposer_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="milestone_proposal"/>
+            <child column="reviewed_by" foreignKey="milestone_proposal_reviewed_by_fkey" implied="false" onDeleteCascade="false" schema="public" table="milestone_proposal"/>
+            <child column="user_id" foreignKey="notification_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="notification"/>
+            <child column="user_id" foreignKey="pod_membership_user_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="pod_membership"/>
+            <child column="owner_id" foreignKey="pods_owner_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="pods"/>
+            <child column="user_id" foreignKey="proposal_vote_user_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="proposal_vote"/>
+            <child column="reporter_id" foreignKey="report_reporter_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="report"/>
+            <child column="resolved_by" foreignKey="report_resolved_by_fkey" implied="false" onDeleteCascade="false" schema="public" table="report"/>
+            <child column="user_id" foreignKey="streak_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="streak"/>
+            <child column="user_id" foreignKey="study_session_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="study_session"/>
+            <child column="user_id" foreignKey="user_identity_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="user_identity"/>
+            <child column="user_id" foreignKey="username_history_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="username_history"/>
+            <child column="user_id" foreignKey="userskill_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="userskill"/>
+         </column>
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="1" name="public_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="email" nullable="false" remarks="" size="2147483647" type="citext" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="username" nullable="false" remarks="" size="2147483647" type="citext" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="profile_picture_url" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="bio" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="'FREE'::subscription_tier" digits="0" id="7" name="subscription" nullable="false" remarks="" size="2147483647" type="subscription_tier" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="8" name="email_verified" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="9" name="is_deleted" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="10" name="deleted_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="11" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="12" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="users_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="users_email_key" unique="true">
+            <column ascending="true" name="email"/>
+         </index>
+         <index name="users_public_id_key" unique="true">
+            <column ascending="true" name="public_id"/>
+         </index>
+         <index name="users_username_key" unique="true">
+            <column ascending="true" name="username"/>
+         </index>
+         <checkConstraint constraint="(((is_deleted = false) AND (deleted_at IS NULL)) OR (is_deleted = true))" name="deleted_user_check"/>
+         <checkConstraint constraint="((length((username)::text) &gt;= 3) AND (length((username)::text) &lt;= 30))" name="users_username_length_check"/>
+      </table>
+      <table name="userskill" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('userskill_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="" size="19" type="bigserial" typeCode="-5">
+            <child column="user_skill_id" foreignKey="user_milestone_progress_user_skill_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="user_milestone_progress"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="userskill_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="skill_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="userskill_skill_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="skills"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="roadmap_version_id" nullable="false" remarks="" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="userskill_roadmap_version_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="roadmap_version"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="status" nullable="false" remarks="" size="2147483647" type="status_value" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="started_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="completed_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="userskill_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+      </table>
+   </tables>
+</database>
