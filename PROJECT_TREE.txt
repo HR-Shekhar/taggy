@@ -1,0 +1,109 @@
+taggy/
+|-- README.md
+|-- docs/
+|   |-- API_SPEC.md
+|   |-- architecture.md
+|   |-- db_design.md
+|   |-- ER_Diagram.md
+|   |-- prd.md
+|   |-- roadmap.md
+|   |-- USER_STORIES.md
+|   |-- vision.md
+|   `-- adr/
+`-- taggy-backend/
+    |-- cmds.txt
+    |-- docker-compose.yml
+    |-- go.mod
+    |-- Makefile
+    |-- sqlc.yaml
+    |-- Taskfile.yml
+    |-- cmd/
+    |   `-- api/
+    |       `-- main.go
+    |-- db/
+    |   |-- migrations/
+    |   |   |-- 20260619135410_auth.sql
+    |   |   |-- 20260619141628_learning.sql
+    |   |   |-- 20260622113128_community_domain.sql
+    |   |   |-- 20260623123148_pod_domain.sql
+    |   |   |-- 20260623133541_messaging_domain.sql
+    |   |   |-- 20260623182515_notification_domain.sql
+    |   |   |-- 20260623183244_audio_domain.sql
+    |   |   |-- 20260623184356_milestone_proposal_domain.sql
+    |   |   `-- 20260623185349_governance_and_moderation_domain.sql
+    |   |-- query/
+    |   `-- sqlc/
+    |-- deployments/
+    |   `-- docker/
+    |-- docs/
+    |   |-- schema/
+    |   |   |-- anomalies.html
+    |   |   |-- anomalies.js
+    |   |   |-- column.js
+    |   |   |-- columns.html
+    |   |   |-- constraint.js
+    |   |   |-- constraints.html
+    |   |   |-- deletionOrder.txt
+    |   |   |-- index.html
+    |   |   |-- info-html.txt
+    |   |   |-- insertionOrder.txt
+    |   |   |-- main.js
+    |   |   |-- orphans.html
+    |   |   |-- relationships.html
+    |   |   |-- relationships.js
+    |   |   |-- routines.html
+    |   |   |-- routines.js
+    |   |   |-- schemaSpy.css
+    |   |   |-- schemaSpy.js
+    |   |   |-- taggy.public.xml
+    |   |   |-- bower/
+    |   |   |   `-- ...
+    |   |   |-- diagrams/
+    |   |   |   |-- orphans/
+    |   |   |   |-- summary/
+    |   |   |   `-- tables/
+    |   |   |-- fonts/
+    |   |   |   |-- indieflower/
+    |   |   |   `-- source-sans-pro/
+    |   |   |-- images/
+    |   |   |-- routines/
+    |   |   |   `-- routine.js
+    |   |   `-- tables/
+    |   |       |-- audio_room_participant.html
+    |   |       |-- audio_room.html
+    |   |       |-- community_channel.html
+    |   |       |-- community.html
+    |   |       |-- goose_db_version.html
+    |   |       |-- message.html
+    |   |       |-- milestone_proposal.html
+    |   |       |-- milestones.html
+    |   |       |-- notification.html
+    |   |       |-- pod_membership.html
+    |   |       `-- pods.html
+    |   `-- swagger/
+    |-- internal/
+    |   |-- audio/
+    |   |-- auth/
+    |   |-- community/
+    |   |-- governance/
+    |   |-- handler/
+    |   |-- infrastructure/
+    |   |   |-- email/
+    |   |   |-- livekit/
+    |   |   |-- postgres/
+    |   |   `-- redis/
+    |   |-- migrations/
+    |   |-- notification/
+    |   |-- pod/
+    |   |-- progress/
+    |   |-- repository/
+    |   |-- roadmap/
+    |   |-- services/
+    |   |-- shared/
+    |   |   |-- config/
+    |   |   |-- errors/
+    |   |   |-- logger/
+    |   |   |-- middleware/
+    |   |   `-- validator/
+    |   `-- skill/
+    `-- scripts/
