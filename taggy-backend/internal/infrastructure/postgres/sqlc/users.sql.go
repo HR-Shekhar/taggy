@@ -7,10 +7,111 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createUser = `-- name: CreateUser :one
+
+INSERT INTO users (
+    email,
+    username,
+    name,
+    profile_picture_url,
+    bio,
+    subscription,
+    email_verified
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7
+)
+RETURNING
+    id,
+    public_id,
+    email,
+    username,
+    name,
+    profile_picture_url,
+    bio,
+    subscription,
+    email_verified,
+    is_deleted,
+    deleted_at,
+    created_at,
+    updated_at
+`
+
+type CreateUserParams struct {
+	Email             string
+	Username          string
+	Name              string
+	ProfilePictureUrl pgtype.Text
+	Bio               pgtype.Text
+	Subscription      SubscriptionTier
+	EmailVerified     bool
+}
+
+// =========================================
+// CREATE
+// =========================================
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Email,
+		arg.Username,
+		arg.Name,
+		arg.ProfilePictureUrl,
+		arg.Bio,
+		arg.Subscription,
+		arg.EmailVerified,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const emailExists = `-- name: EmailExists :one
+
+SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE email = $1
+        AND is_deleted = FALSE
+)
+`
+
+// =========================================
+// EXISTS
+// =========================================
+func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRow(ctx, emailExists, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT 
+SELECT
     id,
     public_id,
     email,
@@ -25,11 +126,303 @@ SELECT
     created_at,
     updated_at
 FROM users
-WHERE email = $1 AND is_deleted = FALSE
+WHERE email = $1
+    AND is_deleted = FALSE
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+
+SELECT
+    id,
+    public_id,
+    email,
+    username,
+    name,
+    profile_picture_url,
+    bio,
+    subscription,
+    email_verified,
+    is_deleted,
+    deleted_at,
+    created_at,
+    updated_at
+FROM users
+WHERE id = $1
+    AND is_deleted = FALSE
+`
+
+// =========================================
+// GET
+// =========================================
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByPublicID = `-- name: GetUserByPublicID :one
+SELECT
+    id,
+    public_id,
+    email,
+    username,
+    name,
+    profile_picture_url,
+    bio,
+    subscription,
+    email_verified,
+    is_deleted,
+    deleted_at,
+    created_at,
+    updated_at
+FROM users
+WHERE public_id = $1
+    AND is_deleted = FALSE
+`
+
+func (q *Queries) GetUserByPublicID(ctx context.Context, publicID uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByPublicID, publicID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT
+    id,
+    public_id,
+    email,
+    username,
+    name,
+    profile_picture_url,
+    bio,
+    subscription,
+    email_verified,
+    is_deleted,
+    deleted_at,
+    created_at,
+    updated_at
+FROM users
+WHERE username = $1
+    AND is_deleted = FALSE
+`
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const restoreUser = `-- name: RestoreUser :exec
+UPDATE users
+SET
+    is_deleted = FALSE,
+    deleted_at = NULL,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) RestoreUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, restoreUser, id)
+	return err
+}
+
+const softDeleteUser = `-- name: SoftDeleteUser :exec
+
+UPDATE users
+SET
+    is_deleted = TRUE,
+    deleted_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+`
+
+// =========================================
+// DELETE (Soft Delete)
+// =========================================
+func (q *Queries) SoftDeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, softDeleteUser, id)
+	return err
+}
+
+const updateSubscription = `-- name: UpdateSubscription :one
+UPDATE users
+SET
+    subscription = $2,
+    updated_at = NOW()
+WHERE id = $1
+    AND is_deleted = FALSE
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at
+`
+
+type UpdateSubscriptionParams struct {
+	ID           int64
+	Subscription SubscriptionTier
+}
+
+func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateSubscription, arg.ID, arg.Subscription)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+
+UPDATE users
+SET
+    name = $2,
+    bio = $3,
+    profile_picture_url = $4,
+    updated_at = NOW()
+WHERE id = $1
+    AND is_deleted = FALSE
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at
+`
+
+type UpdateUserProfileParams struct {
+	ID                int64
+	Name              string
+	Bio               pgtype.Text
+	ProfilePictureUrl pgtype.Text
+}
+
+// =========================================
+// UPDATE
+// =========================================
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserProfile,
+		arg.ID,
+		arg.Name,
+		arg.Bio,
+		arg.ProfilePictureUrl,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Email,
+		&i.Username,
+		&i.Name,
+		&i.ProfilePictureUrl,
+		&i.Bio,
+		&i.Subscription,
+		&i.EmailVerified,
+		&i.IsDeleted,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const usernameExists = `-- name: UsernameExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE username = $1
+        AND is_deleted = FALSE
+)
+`
+
+func (q *Queries) UsernameExists(ctx context.Context, username string) (bool, error) {
+	row := q.db.QueryRow(ctx, usernameExists, username)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const verifyUserEmail = `-- name: VerifyUserEmail :one
+UPDATE users
+SET
+    email_verified = TRUE,
+    updated_at = NOW()
+WHERE id = $1
+    AND is_deleted = FALSE
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at
+`
+
+func (q *Queries) VerifyUserEmail(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, verifyUserEmail, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
