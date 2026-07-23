@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/HR-Shekhar/taggy-backend/internal/app"
-	// "github.com/labstack/echo/v4"
 )
 
 func main() {
