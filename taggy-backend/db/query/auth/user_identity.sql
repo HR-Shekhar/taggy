@@ -28,6 +28,15 @@ WHERE provider = $1
   AND provider_user_id = $2;
 
 
+-- name: GetIdentityByEmail :one
+SELECT ui.*
+FROM user_identity ui
+INNER JOIN users u ON u.id = ui.user_id
+WHERE u.email = $1
+  AND ui.provider = 'local'
+  AND u.is_deleted = FALSE;
+
+
 -- =========================================
 -- CREATE
 -- =========================================
