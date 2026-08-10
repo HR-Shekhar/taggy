@@ -1,7 +1,0 @@
-create migrations file: goose -dir db/migrations create name sql
-
-migrations up: goose -dir db/migrations postgres "postgres://postgres:password@localhost:5431/taggy?sslmode=disable" up
-
-use db: docker exec -it taggy psql -U postgres
-
-schema generation: docker run --rm -v "F:\cooking\taggy\taggy-backend\docs\schema:/output" schemaspy/schemaspy:latest -t pgsql -host host.docker.internal -port 5431 -db taggy -u postgres -p taggyfirstgoat -vizjs
