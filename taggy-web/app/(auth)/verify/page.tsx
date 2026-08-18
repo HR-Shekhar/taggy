@@ -2,111 +2,117 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AuthShell } from "@/components/auth-shell";
-import { Loading } from "@/components/app-ui";
-import { toastApiError } from "@/lib/toast";
 import { UnderlineField } from "@/components/underline-field";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  resendVerification,
-  verifyEmail,
-} from "@/lib/api";
+import { resendVerification, verifyEmail } from "@/lib/api";
+import { toastApiError, toastError, toastSuccess } from "@/lib/toast";
 
 function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState(params.get("email") ?? "");
-  const [otp, setOtp] = useState(params.get("otp") ?? "");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
-  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const e = params.get("email");
+    if (e) setEmail(decodeURIComponent(e));
+  }, [params]);
+
+  async function onVerify() {
+    if (!email.trim() || !otp.trim()) {
+      toastError("Enter the code from your email.");
+      return;
+    }
+    setBusy(true);
+    const res = await verifyEmail(email.trim(), otp.trim());
+    setBusy(false);
+    if (!res.ok) {
+      toastApiError(res);
+      return;
+    }
+    toastSuccess("Email verified. You can sign in now.");
+    router.push("/login");
+  }
+
+  async function onResend() {
+    if (!email.trim()) {
+      toastError("No email on file. Go back and sign up again.");
+      return;
+    }
+    setBusy(true);
+    const res = await resendVerification(email.trim());
+    setBusy(false);
+    if (!res.ok) {
+      toastApiError(res);
+      return;
+    }
+    toastSuccess("Verification code sent again.");
+  }
 
   return (
     <AuthShell
-      title="Verify"
-      subtitle="Enter the 6-digit code we sent to your inbox."
+      title="Verify your email"
+      subtitle="Enter the code we sent to your inbox."
       submitLabel="Verify email"
       busy={busy}
+      onSubmit={onVerify}
       footer={
-        <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
-          Back to login
+        <Link href="/login" className="font-medium text-primary hover:underline">
+          Back to sign in
         </Link>
       }
-      onSubmit={async () => {
-        setBusy(true);
-        setInfo(null);
-        const result = await verifyEmail(email, otp);
-        setBusy(false);
-        if (!result.ok) {
-          toastApiError(result);
-          return;
-        }
-        router.push("/login");
-      }}
     >
-      <UnderlineField
-        id="email"
-        label="Email"
-        type="email"
-        placeholder="Enter your email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        autoComplete="email"
-      />
+      {email ? (
+        <div className="space-y-2">
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Email
+          </p>
+          <p className="border-b border-foreground/25 pb-1.5 text-sm text-foreground">
+            {email}
+          </p>
+          <Link
+            href="/register"
+            className="inline-block text-xs text-primary hover:underline"
+          >
+            Use a different email
+          </Link>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No email provided.{" "}
+          <Link href="/register" className="text-primary hover:underline">
+            Sign up again
+          </Link>
+        </p>
+      )}
       <UnderlineField
         id="otp"
-        label="One-time code"
-        placeholder="6-digit code"
-        value={otp}
-        onChange={(e) => setOtp(e.target.value)}
-        required
-        maxLength={6}
-        pattern="[0-9]{6}"
+        label="Verification code"
+        type="text"
         inputMode="numeric"
         autoComplete="one-time-code"
+        value={otp}
+        onChange={(e) => setOtp(e.target.value)}
+        placeholder="6-digit code"
+        required
       />
-      {info && (
-        <Alert>
-          <AlertDescription>{info}</AlertDescription>
-        </Alert>
-      )}
-      <Button
-        variant="ghost"
+      <button
         type="button"
-        className="w-full text-sm text-muted-foreground"
-        disabled={busy || !email}
-        onClick={async () => {
-          setBusy(true);
-          const result = await resendVerification(email);
-          setBusy(false);
-          if (!result.ok && result.status !== 204) {
-            toastApiError(result);
-            return;
-          }
-          const otpDev = (result.data as { dev_otp?: string } | undefined)?.dev_otp;
-          setInfo(
-            otpDev ? `New OTP sent (dev): ${otpDev}` : "OTP resent if account exists."
-          );
-          if (otpDev) setOtp(otpDev);
-        }}
+        disabled={busy || !email.trim()}
+        onClick={() => void onResend()}
+        className="w-full text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
       >
         Resend code
-      </Button>
+      </button>
     </AuthShell>
   );
 }
 
 export default function VerifyPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <Loading />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="p-8 text-center text-sm">Loading…</div>}>
       <VerifyForm />
     </Suspense>
   );

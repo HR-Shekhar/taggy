@@ -89,7 +89,7 @@ function bucketSessions(sessions: StudySession[], days: Date[]) {
 }
 
 export default function HomePage() {
-  const { username } = useAuth();
+  const { username, displayName } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [skills, setSkills] = useState<MySkill[]>([]);
@@ -220,7 +220,7 @@ export default function HomePage() {
       </form>
 
       <PageHeader
-        title={username ? `Welcome back, @${username}` : "Home"}
+        title={displayName ? `Welcome back, ${displayName}` : "Home"}
         description="Your skills, pods, and study rhythm in one place."
       >
         <div className="flex flex-wrap gap-2">

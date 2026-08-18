@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 
 type Config struct {
 	App        AppConfig
-	DB         DatabaseConfig `envPrefix:"DB_"`
+	DB         DatabaseConfig
 	JWT        JWTConfig
 	Auth       AuthConfig
 	OAuth      OAuthConfig
@@ -73,12 +72,8 @@ type AppConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string `env:"HOST,required,notEmpty"`
-	Port     string `env:"PORT,required,notEmpty"`
-	User     string `env:"USER,required,notEmpty"`
-	Password string `env:"PASSWORD,required,notEmpty"`
-	Name     string `env:"NAME,required,notEmpty"`
-	SSLMode  string `env:"SSLMODE,required,notEmpty"`
+	// Neon / Postgres connection string, e.g. postgresql://user:pass@host/db?sslmode=require
+	URL string `env:"DB_URL,required,notEmpty"`
 }
 
 type JWTConfig struct {
@@ -133,16 +128,4 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &cfg, nil
-}
-
-func (db DatabaseConfig) URL() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		db.User,
-		db.Password,
-		db.Host,
-		db.Port,
-		db.Name,
-		db.SSLMode,
-	)
 }

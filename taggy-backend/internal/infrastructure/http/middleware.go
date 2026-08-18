@@ -17,5 +17,5 @@ func RegisterMiddleware(e *echo.Echo, log zerolog.Logger, cfg *config.Config) {
 		e.Use(middleware.Security())
 	}
 
-	e.Use(middleware.CORS())
+	e.Use(middleware.CORS(cfg.App.FrontendURL))
 }

@@ -27,10 +27,12 @@ import {
   setUsername,
   type TokenPair,
 } from "@/lib/api";
+import { displayFirstName } from "@/lib/utils";
 
 type AuthState = {
   ready: boolean;
   username: string | null;
+  displayName: string;
   isAdmin: boolean;
   subscription: string;
   avatarUrl: string | null;
@@ -48,6 +50,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [username, setUsernameState] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState("");
   const [isAdmin, setIsAdminState] = useState(false);
   const [subscription, setSubscriptionState] = useState("FREE");
   const [avatarUrl, setAvatarUrlStateInternal] = useState<string | null>(null);
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { access } = getTokens();
     const u = getUsername();
     setUsernameState(access && u ? u : null);
+    setDisplayName(access && u ? displayFirstName(null, u) : "");
     setIsAdminState(Boolean(access && u && getIsAdmin()));
     setSubscriptionState(access && u ? getSubscription() : "FREE");
     setAvatarUrlStateInternal(access && u ? getAvatarUrl() : null);
@@ -83,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               : null;
           setAvatarUrl(pic);
           setAvatarUrlStateInternal(pic);
+          const name =
+            typeof res.data?.name === "string" ? String(res.data.name) : null;
+          setDisplayName(displayFirstName(name, u));
         }
       });
     }
@@ -92,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokens(pair.access_token, pair.refresh_token);
     setUsername(pair.username);
     setUsernameState(pair.username);
+    setDisplayName(displayFirstName(null, pair.username));
     const admin = Boolean(pair.is_admin);
     setIsAdmin(admin);
     setIsAdminState(admin);
@@ -107,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           : null;
       setAvatarUrl(pic);
       setAvatarUrlStateInternal(pic);
+      const name =
+        typeof res.data?.name === "string" ? String(res.data.name) : null;
+      setDisplayName(displayFirstName(name, pair.username));
     });
   }, []);
 
@@ -129,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiLogout();
     clearSession();
     setUsernameState(null);
+    setDisplayName("");
     setIsAdminState(false);
     setSubscriptionState("FREE");
     setAvatarUrlStateInternal(null);
@@ -148,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       username,
+      displayName,
       isAdmin,
       subscription,
       avatarUrl,
@@ -162,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       ready,
       username,
+      displayName,
       isAdmin,
       subscription,
       avatarUrl,

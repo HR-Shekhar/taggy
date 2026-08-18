@@ -1,17 +1,35 @@
 package middleware
 
 import (
+	"strings"
+
 	echo "github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 )
 
-func CORS() echo.MiddlewareFunc {
+func CORS(frontendURL string) echo.MiddlewareFunc {
+	origins := []string{
+		"http://localhost:3000",
+		"http://127.0.0.1:3000",
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+	}
+	if extra := strings.TrimRight(strings.TrimSpace(frontendURL), "/"); extra != "" {
+		seen := false
+		for _, o := range origins {
+			if o == extra {
+				seen = true
+				break
+			}
+		}
+		if !seen {
+			origins = append(origins, extra)
+		}
+	}
+
 	return echoMiddleware.CORSWithConfig(
 		echoMiddleware.CORSConfig{
-			AllowOrigins: []string{
-				"http://localhost:3000",
-				"http://localhost:5173",
-			},
+			AllowOrigins: origins,
 			AllowMethods: []string{
 				echo.GET,
 				echo.POST,
@@ -27,11 +45,9 @@ func CORS() echo.MiddlewareFunc {
 				echo.HeaderAuthorization,
 				RequestIDHeader,
 			},
-			// allows browser to read custom headers
 			ExposeHeaders: []string{
 				RequestIDHeader,
 			},
-			// This allows cookies or authenticated browser requests.
 			AllowCredentials: true,
 		},
 	)

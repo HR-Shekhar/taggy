@@ -17,7 +17,7 @@ func New(
 	log.Info().
 		Msg("Connecting to PostgreSQL")
 
-	poolConfig, err := pgxpool.ParseConfig(cfg.URL())
+	poolConfig, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("parse postgres config: %w", err)
 	}
