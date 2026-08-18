@@ -1,0 +1,10 @@
+.git
+**/.env
+**/.env.*
+!**/.env.example
+taggy-web
+**/node_modules
+**/.next
+taggy-backend/tmp
+taggy-backend/docs
+**/*.exe
