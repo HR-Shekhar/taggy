@@ -10,6 +10,7 @@ func CORS() echo.MiddlewareFunc {
 		echoMiddleware.CORSConfig{
 			AllowOrigins: []string{
 				"http://localhost:3000",
+				"http://localhost:5173",
 			},
 			AllowMethods: []string{
 				echo.GET,

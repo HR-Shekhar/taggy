@@ -1,0 +1,16 @@
+package skillrequest
+
+import "errors"
+
+var (
+	ErrInvalidName       = errors.New("skill name is invalid")
+	ErrInvalidDescription = errors.New("skill description is invalid")
+	ErrSimilarFound      = errors.New("similar skills found; set force=true to continue")
+	ErrDuplicatePending  = errors.New("a pending request for this skill name already exists")
+	ErrRequestNotFound   = errors.New("skill creation request not found")
+	ErrNotPending        = errors.New("request is not pending")
+	ErrAIUnavailable     = errors.New("roadmap generation is unavailable")
+	ErrAIFailed          = errors.New("roadmap generation failed")
+	ErrSlugTaken         = errors.New("skill slug is already taken")
+	ErrNotAdmin          = errors.New("admin access required")
+)

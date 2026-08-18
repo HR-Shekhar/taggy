@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"time"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
+	"time"
 )
 
 // Logger logs every HTTP request after it has been processed.
@@ -37,7 +37,8 @@ func Logger(log *zerolog.Logger) echo.MiddlewareFunc {
 			event.
 				Str("request_id", requestID).
 				Str("method", req.Method).
-				Str("path", c.Path()).
+				Str("path", path).
+				Str("uri", req.URL.RequestURI()).
 				Int("status", res.Status).
 				Dur("latency", time.Since(start)).
 				Str("ip", c.RealIP()).

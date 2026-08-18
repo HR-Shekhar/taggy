@@ -19,6 +19,7 @@ Represents a Taggy user.
 | bio                 | TEXT         | NULL                   |
 | premium_status      | ENUM         | NOT NULL DEFAULT FREE  |
 | email_verified      | BOOLEAN      | NOT NULL DEFAULT FALSE |
+| role                | ENUM         | NOT NULL DEFAULT USER  |
 | is_deleted          | BOOLEAN      | NOT NULL DEFAULT FALSE |
 | deleted_at          | TIMESTAMPTZ  | NULL                   |
 | created_at          | TIMESTAMPTZ  | NOT NULL DEFAULT NOW() |
@@ -218,6 +219,8 @@ Represents a step in a roadmap.
 | estimated_hours    | INTEGER      | NULL                    |
 | order_index        | INTEGER      | NOT NULL                |
 | difficulty         | VARCHAR(20)  | NULL                    |
+| chapter            | TEXT         | NULL (section grouping) |
+| kind               | VARCHAR(20)  | NOT NULL DEFAULT TOPIC |
 | created_at         | TIMESTAMPTZ  | NOT NULL DEFAULT NOW()  |
 | updated_at         | TIMESTAMPTZ  | NOT NULL DEFAULT NOW()  |
 
@@ -226,6 +229,11 @@ Represents a step in a roadmap.
 * BEGINNER
 * INTERMEDIATE
 * ADVANCED
+
+### Kind Values
+
+* CHAPTER — section overview milestone
+* TOPIC — concrete learning unit inside a chapter
 
 ### Constraints
 
@@ -642,6 +650,7 @@ Supports future features such as:
 | community_channel_id | BIGINT      | NULL FK → CommunityChannel(id) |
 | pod_id               | BIGINT      | NULL FK → Pod(id)              |
 | content              | TEXT        | NOT NULL                       |
+| reply_to_message_id  | BIGINT      | NULL FK → Message(id)          |
 | edited_at            | TIMESTAMPTZ | NULL                           |
 | created_at           | TIMESTAMPTZ | NOT NULL DEFAULT NOW()         |
 
@@ -788,6 +797,14 @@ PROPOSAL_REJECTED
 COMMUNITY_ANNOUNCEMENT
 
 SYSTEM
+
+SKILL_REQUEST_APPROVED
+
+SKILL_REQUEST_REJECTED
+
+ROADMAP_REQUEST_APPROVED
+
+ROADMAP_REQUEST_REJECTED
 ```
 
 ---
@@ -1341,3 +1358,72 @@ Application-level validation recommended.
    target_type + target_id.
 
 5. Duplicate OPEN reports should be prevented at the application level.
+
+---
+
+## SkillCreationRequest
+
+### Purpose
+
+User-submitted request to add a new skill; AI drafts milestones; admin approves or rejects.
+
+### Columns
+
+| Column            | Type         | Constraints |
+| ----------------- | ------------ | ----------- |
+| id                | BIGSERIAL    | PK |
+| public_id         | UUID         | UNIQUE NOT NULL |
+| requester_id      | BIGINT       | FK → users(id) |
+| name              | TEXT         | NOT NULL |
+| slug_candidate    | TEXT         | NOT NULL |
+| description       | TEXT         | NULL |
+| status            | ENUM         | PENDING \| APPROVED \| REJECTED \| CANCELLED |
+| similar_skills    | JSONB        | NOT NULL DEFAULT '[]' |
+| draft_milestones  | JSONB        | NOT NULL DEFAULT '[]' |
+| admin_note        | TEXT         | NULL |
+| reviewed_by       | BIGINT       | NULL FK → users(id) |
+| reviewed_at       | TIMESTAMPTZ  | NULL |
+| created_skill_id  | BIGINT       | NULL FK → skills(id) |
+| created_at        | TIMESTAMPTZ  | NOT NULL |
+| updated_at        | TIMESTAMPTZ  | NOT NULL |
+
+### Indexes
+
+* Unique partial: one PENDING create per `(requester_id, lower(name))`
+
+---
+
+## RoadmapEditRequest
+
+### Purpose
+
+Enrolled user requests a new AI-drafted roadmap version for an existing skill; admin publishes as ACTIVE and archives the previous ACTIVE version.
+
+### Columns
+
+| Column              | Type         | Constraints |
+| ------------------- | ------------ | ----------- |
+| id                  | BIGSERIAL    | PK |
+| public_id           | UUID         | UNIQUE NOT NULL |
+| skill_id            | BIGINT       | FK → skills(id) |
+| requester_id        | BIGINT       | FK → users(id) |
+| rationale           | TEXT         | NULL |
+| status              | ENUM         | same as SkillCreationRequest |
+| base_version_number | INT          | NOT NULL |
+| draft_milestones    | JSONB        | NOT NULL DEFAULT '[]' |
+| admin_note          | TEXT         | NULL |
+| reviewed_by         | BIGINT       | NULL |
+| reviewed_at         | TIMESTAMPTZ  | NULL |
+| created_version_id  | BIGINT       | NULL FK → roadmap_version(id) |
+| created_at          | TIMESTAMPTZ  | NOT NULL |
+| updated_at          | TIMESTAMPTZ  | NOT NULL |
+
+### Indexes
+
+* Unique partial: one PENDING edit per `(requester_id, skill_id)`
+
+### Notes
+
+* Similarity search uses `pg_trgm` on `skills.name`.
+* Platform role values: `USER`, `ADMIN`.
+* Platform admins: `users.role = ADMIN`; bootstrapped via `ADMIN_USERNAMES`. APIs still expose `is_admin` as a boolean.

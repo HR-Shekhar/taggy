@@ -77,7 +77,7 @@ Inside the deferred function we do
 
 err = echo.NewHTTPError(...)
 
-Since err is the named return variable, 
-when the deferred function finishes, 
+Since err is the named return variable,
+when the deferred function finishes,
 Go automatically returns it.
 */

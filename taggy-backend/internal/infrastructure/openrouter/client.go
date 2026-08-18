@@ -1,0 +1,638 @@
+package openrouter
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/rs/zerolog"
+)
+
+const (
+	MaxMilestones        = 128
+	minTopics            = 5
+	maxTopics            = 16
+	minSubtopics         = 3
+	maxSubtopicsPerTopic = 8
+)
+
+// MilestoneDraft is a curriculum unit stored in draft_milestones JSON and later
+// inserted into milestones (chapter + topic names; descriptions optional/empty).
+type MilestoneDraft struct {
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	EstimatedHours int    `json:"estimated_hours"`
+	OrderIndex     int    `json:"order_index"`
+	Difficulty     string `json:"difficulty"`
+	Slug           string `json:"slug"`
+	Chapter        string `json:"chapter"`
+	Kind           string `json:"kind"` // CHAPTER | TOPIC
+}
+
+// Client talks to an OpenAI-compatible chat completions API.
+type Client struct {
+	apiKey    string
+	model     string
+	baseURL   string
+	maxTokens int
+	jsonMode  bool
+	http      *http.Client
+	log       zerolog.Logger
+}
+
+type Options struct {
+	MaxTokens int
+	JSONMode  bool
+	Timeout   time.Duration
+}
+
+func New(apiKey, model, baseURL string, log zerolog.Logger) *Client {
+	return NewWithOptions(apiKey, model, baseURL, Options{}, log)
+}
+
+func NewWithOptions(apiKey, model, baseURL string, opts Options, log zerolog.Logger) *Client {
+	if strings.TrimSpace(baseURL) == "" {
+		baseURL = "https://integrate.api.nvidia.com/v1"
+	}
+	if strings.TrimSpace(model) == "" {
+		model = "z-ai/glm-5.2"
+	}
+	timeout := opts.Timeout
+	if timeout <= 0 {
+		timeout = 3 * time.Minute
+	}
+	maxTokens := opts.MaxTokens
+	if maxTokens <= 0 {
+		maxTokens = 8192
+	}
+	return &Client{
+		apiKey:    strings.TrimSpace(apiKey),
+		model:     model,
+		baseURL:   strings.TrimRight(baseURL, "/"),
+		maxTokens: maxTokens,
+		jsonMode:  opts.JSONMode,
+		http:      &http.Client{Timeout: timeout},
+		log:       log,
+	}
+}
+
+func (c *Client) Available() bool {
+	return c != nil && c.apiKey != ""
+}
+
+type chatRequest struct {
+	Model          string        `json:"model"`
+	Messages       []chatMessage `json:"messages"`
+	ResponseFormat *respFormat   `json:"response_format,omitempty"`
+	Temperature    float64       `json:"temperature"`
+	TopP           float64       `json:"top_p,omitempty"`
+	MaxTokens      int           `json:"max_tokens,omitempty"`
+	Stream         bool          `json:"stream"`
+}
+
+type chatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type respFormat struct {
+	Type string `json:"type"`
+}
+
+type chatResponse struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+	Usage *struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
+}
+
+// compactRoadmap is the exact AI contract — names only, easy to store/edit later.
+//
+//	{"topics":[{"name":"Supervised Learning","subtopics":["Linear Regression","KNN"]}]}
+type compactRoadmap struct {
+	Topics []compactTopic `json:"topics"`
+}
+
+type compactTopic struct {
+	Name      string   `json:"name"`
+	Subtopics []string `json:"subtopics"`
+}
+
+// GenerateRoadmap asks for one compact JSON outline (topics → subtopic names),
+// then flattens into CHAPTER + TOPIC milestones for DB storage.
+func (c *Client) GenerateRoadmap(
+	ctx context.Context,
+	skillName, description, rationale string,
+) ([]MilestoneDraft, error) {
+	if !c.Available() {
+		return nil, fmt.Errorf("ai api key not configured")
+	}
+
+	start := time.Now()
+	system := `You are Taggy's curriculum architect. Design a friendly course for absolute beginners that still takes them to a solid, job-ready / competent level.
+Return ONLY one valid JSON object (strict JSON: no trailing commas, no comments, no markdown) matching:
+{"topics":[{"name":"Topic Name","subtopics":["Subtopic A","Subtopic B","Subtopic C"]}]}
+
+Audience & tone (critical):
+- Assume the learner starts at zero — no prior experience
+- Every topic/subtopic name must be plain, human language a beginner would understand on first read
+- Prefer friendly lesson titles like "What is HTML and how a webpage is built", "Make layouts with Flexbox", "Talk to APIs with fetch" — not jargon dumps like "SSR hydration", "monorepo DX", "CQRS", or unexplained acronyms
+- If a technical term is needed, pair it with plain words (e.g. "Git basics: save and share your code")
+- Order from easiest → harder; early topics build confidence; later topics deepen skill
+- No "expert-only" or interview-cram framing; teach step by step like a patient mentor
+
+Coverage (names only — thorough but approachable):
+- Include 10–14 topics: foundations → core skills → practice projects → everyday tooling → polish / next level
+- Each topic: 5–8 concrete subtopics (real lessons a course would teach — not vague "Basics" / "Advanced")
+- Aim for a complete course path (roughly 70–110 named lessons including topic headers); do not stop early
+- End at a good level (build real projects, use modern tools) without skipping the beginner runway
+- Keep strings short; names only; no descriptions; no extra keys
+- Output must parse in a strict JSON parser`
+
+	user := fmt.Sprintf("Skill: %s\n", skillName)
+	if d := strings.TrimSpace(description); d != "" {
+		user += "Description: " + d + "\n"
+	}
+	if r := strings.TrimSpace(rationale); r != "" {
+		user += "Update rationale: " + r + "\n"
+	}
+	user += "Write a complete beginner-friendly syllabus from zero to a competent level. Cover the full course path with clear everyday wording in every name — do not stop at a partial outline.\n"
+	user += "Return the JSON outline only."
+
+	raw, err := c.chatJSON(ctx, system, user)
+	if err != nil {
+		return nil, err
+	}
+	outline, err := parseCompactRoadmap(raw)
+	if err != nil {
+		c.log.Warn().Err(err).Str("snippet", truncate(raw, 500)).Msg("ai compact roadmap parse failed; retrying")
+		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas.")
+		if err != nil {
+			return nil, err
+		}
+		outline, err = parseCompactRoadmap(raw)
+		if err != nil {
+			c.log.Warn().Err(err).Str("snippet", truncate(raw, 800)).Msg("ai compact roadmap parse failed after retry")
+			return nil, fmt.Errorf("parse roadmap json: %w", err)
+		}
+	}
+
+	drafts := flattenCompactRoadmap(outline)
+	if len(drafts) < minTopics {
+		return nil, fmt.Errorf("too few milestones generated (%d)", len(drafts))
+	}
+
+	topicCount := len(outline.Topics)
+	if topicCount > maxTopics {
+		topicCount = maxTopics
+	}
+	c.log.Info().
+		Str("model", c.model).
+		Str("base_url", c.baseURL).
+		Dur("latency", time.Since(start)).
+		Int("topics_raw", len(outline.Topics)).
+		Int("topics_used", topicCount).
+		Int("milestones", len(drafts)).
+		Int("max_milestones", MaxMilestones).
+		Msg("ai compact roadmap generated")
+
+	return drafts, nil
+}
+
+// QuizQuestionDraft is one AI-generated multiple-choice item (answers included for storage).
+type QuizQuestionDraft struct {
+	Topic          string   `json:"topic"`
+	Difficulty     int      `json:"difficulty"`
+	Prompt         string   `json:"prompt"`
+	Options        []string `json:"options"`
+	CorrectIndices []int    `json:"correct"`
+}
+
+type compactQuiz struct {
+	Questions []QuizQuestionDraft `json:"questions"`
+}
+
+const quizQuestionCount = 10
+
+// GenerateQuiz builds 10 timed MCQs from completed topic titles.
+func (c *Client) GenerateQuiz(ctx context.Context, topicTitles []string) ([]QuizQuestionDraft, error) {
+	if !c.Available() {
+		return nil, fmt.Errorf("ai api key not configured")
+	}
+	titles := make([]string, 0, len(topicTitles))
+	for _, t := range topicTitles {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			titles = append(titles, t)
+		}
+	}
+	if len(titles) == 0 {
+		return nil, fmt.Errorf("no topics provided")
+	}
+
+	start := time.Now()
+	system := `You are Taggy's quiz writer for learners who finished specific roadmap topics.
+Return ONLY one valid JSON object (strict JSON: no trailing commas, no comments, no markdown):
+{"questions":[{"topic":"Topic title","difficulty":1,"prompt":"Question?","options":["A","B","C","D","E"],"correct":[0,2]}]}
+
+Rules:
+- Exactly 10 questions
+- Each question: exactly 5 short options (indexes 0–4)
+- correct = array of one or more correct option indexes (multi-select allowed)
+- difficulty must be 1 through 10 in increasing order across the 10 questions
+- Each question must be solvable in under 60 seconds by someone who studied that topic
+- Draw randomly across the provided completed topics (reuse topics if fewer than 10)
+- Plain beginner-friendly wording; no trick questions; no empty options
+- Output must parse in a strict JSON parser`
+
+	user := "Completed topics:\n"
+	for i, t := range titles {
+		user += fmt.Sprintf("%d. %s\n", i+1, t)
+	}
+	user += "Return the JSON quiz only."
+
+	raw, err := c.chatJSON(ctx, system, user)
+	if err != nil {
+		return nil, err
+	}
+	quiz, err := parseCompactQuiz(raw)
+	if err != nil {
+		c.log.Warn().Err(err).Str("snippet", truncate(raw, 500)).Msg("ai quiz parse failed; retrying")
+		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Exactly 10 questions.")
+		if err != nil {
+			return nil, err
+		}
+		quiz, err = parseCompactQuiz(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parse quiz json: %w", err)
+		}
+	}
+
+	out := normalizeQuiz(quiz.Questions, titles)
+	if len(out) != quizQuestionCount {
+		return nil, fmt.Errorf("expected %d valid questions, got %d", quizQuestionCount, len(out))
+	}
+
+	c.log.Info().
+		Str("model", c.model).
+		Dur("latency", time.Since(start)).
+		Int("topics", len(titles)).
+		Int("questions", len(out)).
+		Msg("ai quiz generated")
+	return out, nil
+}
+
+func parseCompactQuiz(raw string) (compactQuiz, error) {
+	cleaned := repairJSON(raw)
+	var quiz compactQuiz
+	if err := json.Unmarshal([]byte(cleaned), &quiz); err != nil {
+		return compactQuiz{}, err
+	}
+	if len(quiz.Questions) == 0 {
+		return compactQuiz{}, fmt.Errorf("empty questions array")
+	}
+	return quiz, nil
+}
+
+func normalizeQuiz(in []QuizQuestionDraft, fallbackTopics []string) []QuizQuestionDraft {
+	out := make([]QuizQuestionDraft, 0, quizQuestionCount)
+	for i, q := range in {
+		if len(out) >= quizQuestionCount {
+			break
+		}
+		prompt := strings.TrimSpace(q.Prompt)
+		if prompt == "" {
+			continue
+		}
+		opts := make([]string, 0, 5)
+		for _, o := range q.Options {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				opts = append(opts, o)
+			}
+		}
+		if len(opts) < 5 {
+			continue
+		}
+		if len(opts) > 5 {
+			opts = opts[:5]
+		}
+		seen := map[int]struct{}{}
+		correct := make([]int, 0, len(q.CorrectIndices))
+		for _, idx := range q.CorrectIndices {
+			if idx < 0 || idx > 4 {
+				continue
+			}
+			if _, ok := seen[idx]; ok {
+				continue
+			}
+			seen[idx] = struct{}{}
+			correct = append(correct, idx)
+		}
+		if len(correct) == 0 {
+			continue
+		}
+		topic := strings.TrimSpace(q.Topic)
+		if topic == "" && len(fallbackTopics) > 0 {
+			topic = fallbackTopics[i%len(fallbackTopics)]
+		}
+		diff := q.Difficulty
+		if diff < 1 || diff > 10 {
+			diff = len(out) + 1
+		}
+		out = append(out, QuizQuestionDraft{
+			Topic:          topic,
+			Difficulty:     diff,
+			Prompt:         prompt,
+			Options:        opts,
+			CorrectIndices: correct,
+		})
+	}
+	// Force increasing difficulty labels 1..n for stored order.
+	for i := range out {
+		out[i].Difficulty = i + 1
+	}
+	return out
+}
+
+var trailingCommaRE = regexp.MustCompile(`,\s*([}\]])`)
+
+func parseCompactRoadmap(raw string) (compactRoadmap, error) {
+	cleaned := repairJSON(raw)
+	var outline compactRoadmap
+	if err := json.Unmarshal([]byte(cleaned), &outline); err != nil {
+		return compactRoadmap{}, err
+	}
+	if len(outline.Topics) == 0 {
+		return compactRoadmap{}, fmt.Errorf("empty topics array")
+	}
+	return outline, nil
+}
+
+func repairJSON(s string) string {
+	s = extractJSONObject(s)
+	prev := ""
+	for s != prev {
+		prev = s
+		s = trailingCommaRE.ReplaceAllString(s, "$1")
+	}
+	return strings.TrimSpace(s)
+}
+
+func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
+	out := make([]MilestoneDraft, 0, MaxMilestones)
+	seenSlug := map[string]struct{}{}
+
+	topics := outline.Topics
+	if len(topics) > maxTopics {
+		topics = topics[:maxTopics]
+	}
+
+	for _, t := range topics {
+		if len(out) >= MaxMilestones {
+			break
+		}
+		name := strings.TrimSpace(t.Name)
+		if name == "" {
+			continue
+		}
+
+		chapterSlug := uniqueSlug(slugify(name), "chapter", seenSlug)
+		out = append(out, MilestoneDraft{
+			Title:          name,
+			Description:    "",
+			EstimatedHours: 8,
+			OrderIndex:     len(out) + 1,
+			Difficulty:     "INTERMEDIATE",
+			Slug:           chapterSlug,
+			Chapter:        name,
+			Kind:           "CHAPTER",
+		})
+
+		subs := t.Subtopics
+		if len(subs) > maxSubtopicsPerTopic {
+			subs = subs[:maxSubtopicsPerTopic]
+		}
+		addedSubs := 0
+		for _, rawSub := range subs {
+			if len(out) >= MaxMilestones {
+				break
+			}
+			sub := strings.TrimSpace(rawSub)
+			if sub == "" || strings.EqualFold(sub, name) {
+				continue
+			}
+			subSlug := uniqueSlug(slugify(sub), "topic", seenSlug)
+			out = append(out, MilestoneDraft{
+				Title:          sub,
+				Description:    "",
+				EstimatedHours: 12,
+				OrderIndex:     len(out) + 1,
+				Difficulty:     "INTERMEDIATE",
+				Slug:           subSlug,
+				Chapter:        name,
+				Kind:           "TOPIC",
+			})
+			addedSubs++
+			if addedSubs >= maxSubtopicsPerTopic {
+				break
+			}
+		}
+	}
+	return out
+}
+
+func uniqueSlug(base, prefix string, seen map[string]struct{}) string {
+	slug := base
+	if slug == "" {
+		slug = prefix
+	}
+	if prefix == "chapter" && !strings.HasPrefix(slug, "chapter-") {
+		slug = "chapter-" + slug
+	}
+	if _, ok := seen[slug]; !ok {
+		seen[slug] = struct{}{}
+		return slug
+	}
+	for i := 2; i < 1000; i++ {
+		candidate := fmt.Sprintf("%s-%d", slug, i)
+		if _, ok := seen[candidate]; !ok {
+			seen[candidate] = struct{}{}
+			return candidate
+		}
+	}
+	fallback := fmt.Sprintf("%s-%d", slug, len(seen)+1)
+	seen[fallback] = struct{}{}
+	return fallback
+}
+
+func (c *Client) chatJSON(ctx context.Context, system, user string) (string, error) {
+	const maxAttempts = 5
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		content, err := c.chatJSONOnce(ctx, system, user)
+		if err == nil {
+			return content, nil
+		}
+		lastErr = err
+		if !isRetryableAIError(err) || attempt == maxAttempts {
+			return "", err
+		}
+		backoff := time.Duration(attempt*attempt) * 2 * time.Second
+		c.log.Warn().
+			Err(err).
+			Int("attempt", attempt).
+			Dur("backoff", backoff).
+			Msg("ai request retrying after rate limit/transient error")
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(backoff):
+		}
+	}
+	return "", lastErr
+}
+
+func isRetryableAIError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "429") ||
+		strings.Contains(msg, "rate") ||
+		strings.Contains(msg, "status 503") ||
+		strings.Contains(msg, "status 502")
+}
+
+func (c *Client) chatJSONOnce(ctx context.Context, system, user string) (string, error) {
+	payload := chatRequest{
+		Model: c.model,
+		Messages: []chatMessage{
+			{Role: "system", Content: system},
+			{Role: "user", Content: user},
+		},
+		Temperature: 0.3,
+		TopP:        1,
+		MaxTokens:   c.maxTokens,
+		Stream:      false,
+	}
+	if c.jsonMode {
+		payload.ResponseFormat = &respFormat{Type: "json_object"}
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	start := time.Now()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := c.http.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	raw, err := io.ReadAll(io.LimitReader(res.Body, 2<<20))
+	if err != nil {
+		return "", err
+	}
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		snippet := strings.TrimSpace(string(raw))
+		if len(snippet) > 400 {
+			snippet = snippet[:400] + "…"
+		}
+		c.log.Warn().
+			Int("status", res.StatusCode).
+			Dur("latency", time.Since(start)).
+			Str("model", c.model).
+			Str("base_url", c.baseURL).
+			Str("body", snippet).
+			Msg("ai chat completion failed")
+		switch res.StatusCode {
+		case http.StatusPaymentRequired:
+			return "", fmt.Errorf("ai provider payment required (402)")
+		case http.StatusTooManyRequests:
+			return "", fmt.Errorf("ai provider rate limited (429)")
+		default:
+			return "", fmt.Errorf("ai provider status %d", res.StatusCode)
+		}
+	}
+
+	var parsed chatResponse
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return "", err
+	}
+	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
+		return "", fmt.Errorf("ai provider empty response")
+	}
+	return extractJSONObject(parsed.Choices[0].Message.Content), nil
+}
+
+func extractJSONObject(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "```json")
+	s = strings.TrimPrefix(s, "```JSON")
+	s = strings.TrimPrefix(s, "```")
+	s = strings.TrimSuffix(s, "```")
+	s = strings.TrimSpace(s)
+
+	start := strings.Index(s, "{")
+	end := strings.LastIndex(s, "}")
+	if start >= 0 && end > start {
+		return s[start : end+1]
+	}
+	return s
+}
+
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	var b strings.Builder
+	prevHyphen := false
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			prevHyphen = false
+		default:
+			if !prevHyphen && b.Len() > 0 {
+				b.WriteByte('-')
+				prevHyphen = true
+			}
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		return "milestone"
+	}
+	if len(out) > 60 {
+		out = strings.Trim(out[:60], "-")
+	}
+	return out
+}
+
+func truncate(s string, n int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}

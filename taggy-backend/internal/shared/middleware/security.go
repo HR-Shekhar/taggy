@@ -6,7 +6,7 @@ import (
 )
 
 /* Disabling XFrameOptions
-A user could be tricked into clicking your UI 
+A user could be tricked into clicking your UI
 while thinking they're clicking something else (clickjacking).*/
 
 /*H STSMaxAge: 31536000, -- One year.

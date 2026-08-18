@@ -15,6 +15,7 @@ Development Order
 ### Phase 2
 ✓ Skills
 ✓ Milestones
+✓ Roadmap versions (catalog + switch enrollment)
 
 ### Phase 3
 ✓ Study Hours
@@ -28,6 +29,11 @@ Development Order
 
 ### Phase 6
 ✓ Audio Rooms
+
+### Phase 7
+✓ Admin (`users.role`) + AI catalog requests (OpenRouter)
+✓ Skill creation requests (similarity → draft → admin approve)
+✓ Roadmap edit requests (enrolled → draft → new ACTIVE version)
 
 
 ### The first actual backend entities will probably be:

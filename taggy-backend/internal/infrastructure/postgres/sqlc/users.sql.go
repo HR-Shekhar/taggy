@@ -32,20 +32,7 @@ VALUES (
     $6,
     $7
 )
-RETURNING
-    id,
-    public_id,
-    email,
-    username,
-    name,
-    profile_picture_url,
-    bio,
-    subscription,
-    email_verified,
-    is_deleted,
-    deleted_at,
-    created_at,
-    updated_at
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 `
 
 type CreateUserParams struct {
@@ -86,6 +73,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -111,20 +99,7 @@ func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT
-    id,
-    public_id,
-    email,
-    username,
-    name,
-    profile_picture_url,
-    bio,
-    subscription,
-    email_verified,
-    is_deleted,
-    deleted_at,
-    created_at,
-    updated_at
+SELECT id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 FROM users
 WHERE email = $1
     AND is_deleted = FALSE
@@ -147,26 +122,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
 
-SELECT
-    id,
-    public_id,
-    email,
-    username,
-    name,
-    profile_picture_url,
-    bio,
-    subscription,
-    email_verified,
-    is_deleted,
-    deleted_at,
-    created_at,
-    updated_at
+SELECT id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 FROM users
 WHERE id = $1
     AND is_deleted = FALSE
@@ -192,25 +155,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUserByPublicID = `-- name: GetUserByPublicID :one
-SELECT
-    id,
-    public_id,
-    email,
-    username,
-    name,
-    profile_picture_url,
-    bio,
-    subscription,
-    email_verified,
-    is_deleted,
-    deleted_at,
-    created_at,
-    updated_at
+SELECT id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 FROM users
 WHERE public_id = $1
     AND is_deleted = FALSE
@@ -233,25 +184,13 @@ func (q *Queries) GetUserByPublicID(ctx context.Context, publicID uuid.UUID) (Us
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT
-    id,
-    public_id,
-    email,
-    username,
-    name,
-    profile_picture_url,
-    bio,
-    subscription,
-    email_verified,
-    is_deleted,
-    deleted_at,
-    created_at,
-    updated_at
+SELECT id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 FROM users
 WHERE username = $1
     AND is_deleted = FALSE
@@ -274,6 +213,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -317,7 +257,7 @@ SET
     updated_at = NOW()
 WHERE id = $1
     AND is_deleted = FALSE
-RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 `
 
 type UpdateSubscriptionParams struct {
@@ -342,6 +282,7 @@ func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscription
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -356,7 +297,7 @@ SET
     updated_at = NOW()
 WHERE id = $1
     AND is_deleted = FALSE
-RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 `
 
 type UpdateUserProfileParams struct {
@@ -391,6 +332,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -418,7 +360,7 @@ SET
     updated_at = NOW()
 WHERE id = $1
     AND is_deleted = FALSE
-RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at
+RETURNING id, public_id, email, username, name, profile_picture_url, bio, subscription, email_verified, is_deleted, deleted_at, created_at, updated_at, role
 `
 
 func (q *Queries) VerifyUserEmail(ctx context.Context, id int64) (User, error) {
@@ -438,6 +380,7 @@ func (q *Queries) VerifyUserEmail(ctx context.Context, id int64) (User, error) {
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Role,
 	)
 	return i, err
 }

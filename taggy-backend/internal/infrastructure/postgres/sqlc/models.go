@@ -7,6 +7,7 @@ package sqlc
 import (
 	"database/sql/driver"
 	"fmt"
+	"net/netip"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -139,6 +140,50 @@ func (ns NullAudioRoomType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.AudioRoomType), nil
+}
+
+type CatalogRequestStatus string
+
+const (
+	CatalogRequestStatusPENDING   CatalogRequestStatus = "PENDING"
+	CatalogRequestStatusAPPROVED  CatalogRequestStatus = "APPROVED"
+	CatalogRequestStatusREJECTED  CatalogRequestStatus = "REJECTED"
+	CatalogRequestStatusCANCELLED CatalogRequestStatus = "CANCELLED"
+)
+
+func (e *CatalogRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CatalogRequestStatus(s)
+	case string:
+		*e = CatalogRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CatalogRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCatalogRequestStatus struct {
+	CatalogRequestStatus CatalogRequestStatus
+	Valid                bool // Valid is true if CatalogRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCatalogRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CatalogRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CatalogRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCatalogRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CatalogRequestStatus), nil
 }
 
 type CurrentStatus string
@@ -277,17 +322,21 @@ func (ns NullMilestoneProposalType) Value() (driver.Value, error) {
 type NotificationType string
 
 const (
-	NotificationTypePODJOINREQUEST        NotificationType = "POD_JOIN_REQUEST"
-	NotificationTypePODJOINACCEPTED       NotificationType = "POD_JOIN_ACCEPTED"
-	NotificationTypePODJOINREJECTED       NotificationType = "POD_JOIN_REJECTED"
-	NotificationTypePODMEMBERREMOVED      NotificationType = "POD_MEMBER_REMOVED"
-	NotificationTypeMILESTONEDUE          NotificationType = "MILESTONE_DUE"
-	NotificationTypeMILESTONECOMPLETED    NotificationType = "MILESTONE_COMPLETED"
-	NotificationTypeROADMAPUPDATED        NotificationType = "ROADMAP_UPDATED"
-	NotificationTypePROPOSALAPPROVED      NotificationType = "PROPOSAL_APPROVED"
-	NotificationTypePROPOSALREJECTED      NotificationType = "PROPOSAL_REJECTED"
-	NotificationTypeCOMMUNITYANNOUNCEMENT NotificationType = "COMMUNITY_ANNOUNCEMENT"
-	NotificationTypeSYSTEM                NotificationType = "SYSTEM"
+	NotificationTypePODJOINREQUEST         NotificationType = "POD_JOIN_REQUEST"
+	NotificationTypePODJOINACCEPTED        NotificationType = "POD_JOIN_ACCEPTED"
+	NotificationTypePODJOINREJECTED        NotificationType = "POD_JOIN_REJECTED"
+	NotificationTypePODMEMBERREMOVED       NotificationType = "POD_MEMBER_REMOVED"
+	NotificationTypeMILESTONEDUE           NotificationType = "MILESTONE_DUE"
+	NotificationTypeMILESTONECOMPLETED     NotificationType = "MILESTONE_COMPLETED"
+	NotificationTypeROADMAPUPDATED         NotificationType = "ROADMAP_UPDATED"
+	NotificationTypePROPOSALAPPROVED       NotificationType = "PROPOSAL_APPROVED"
+	NotificationTypePROPOSALREJECTED       NotificationType = "PROPOSAL_REJECTED"
+	NotificationTypeCOMMUNITYANNOUNCEMENT  NotificationType = "COMMUNITY_ANNOUNCEMENT"
+	NotificationTypeSYSTEM                 NotificationType = "SYSTEM"
+	NotificationTypeSKILLREQUESTAPPROVED   NotificationType = "SKILL_REQUEST_APPROVED"
+	NotificationTypeSKILLREQUESTREJECTED   NotificationType = "SKILL_REQUEST_REJECTED"
+	NotificationTypeROADMAPREQUESTAPPROVED NotificationType = "ROADMAP_REQUEST_APPROVED"
+	NotificationTypeROADMAPREQUESTREJECTED NotificationType = "ROADMAP_REQUEST_REJECTED"
 )
 
 func (e *NotificationType) Scan(src interface{}) error {
@@ -323,6 +372,135 @@ func (ns NullNotificationType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.NotificationType), nil
+}
+
+type PaymentStatus string
+
+const (
+	PaymentStatusCREATED PaymentStatus = "CREATED"
+	PaymentStatusPAID    PaymentStatus = "PAID"
+	PaymentStatusFAILED  PaymentStatus = "FAILED"
+)
+
+func (e *PaymentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentStatus(s)
+	case string:
+		*e = PaymentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentStatus struct {
+	PaymentStatus PaymentStatus
+	Valid         bool // Valid is true if PaymentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentStatus), nil
+}
+
+type PodMemberRole string
+
+const (
+	PodMemberRoleOWNER  PodMemberRole = "OWNER"
+	PodMemberRoleADMIN  PodMemberRole = "ADMIN"
+	PodMemberRoleMEMBER PodMemberRole = "MEMBER"
+)
+
+func (e *PodMemberRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PodMemberRole(s)
+	case string:
+		*e = PodMemberRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PodMemberRole: %T", src)
+	}
+	return nil
+}
+
+type NullPodMemberRole struct {
+	PodMemberRole PodMemberRole
+	Valid         bool // Valid is true if PodMemberRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPodMemberRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.PodMemberRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PodMemberRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPodMemberRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PodMemberRole), nil
+}
+
+type PodQuizStatus string
+
+const (
+	PodQuizStatusINPROGRESS PodQuizStatus = "IN_PROGRESS"
+	PodQuizStatusCOMPLETED  PodQuizStatus = "COMPLETED"
+	PodQuizStatusABANDONED  PodQuizStatus = "ABANDONED"
+)
+
+func (e *PodQuizStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PodQuizStatus(s)
+	case string:
+		*e = PodQuizStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PodQuizStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPodQuizStatus struct {
+	PodQuizStatus PodQuizStatus
+	Valid         bool // Valid is true if PodQuizStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPodQuizStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PodQuizStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PodQuizStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPodQuizStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PodQuizStatus), nil
 }
 
 type ProgressStatus string
@@ -672,6 +850,48 @@ func (ns NullUserPodMembershipStatus) Value() (driver.Value, error) {
 	return string(ns.UserPodMembershipStatus), nil
 }
 
+type UserRole string
+
+const (
+	UserRoleUSER  UserRole = "USER"
+	UserRoleADMIN UserRole = "ADMIN"
+)
+
+func (e *UserRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserRole(s)
+	case string:
+		*e = UserRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserRole: %T", src)
+	}
+	return nil
+}
+
+type NullUserRole struct {
+	UserRole UserRole
+	Valid    bool // Valid is true if UserRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserRole), nil
+}
+
 type AudioRoom struct {
 	ID                 int64
 	PublicID           uuid.UUID
@@ -717,6 +937,16 @@ type CommunityChannel struct {
 	Description pgtype.Text
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
+	Slug        string
+}
+
+type EmailVerificationOtp struct {
+	ID         int64
+	UserID     int64
+	OtpHash    string
+	ExpiresAt  pgtype.Timestamptz
+	ConsumedAt pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
 }
 
 type Message struct {
@@ -727,6 +957,7 @@ type Message struct {
 	Content            string
 	EditedAt           pgtype.Timestamptz
 	CreatedAt          pgtype.Timestamptz
+	ReplyToMessageID   pgtype.Int8
 }
 
 type Milestone struct {
@@ -739,6 +970,11 @@ type Milestone struct {
 	Difficulty       pgtype.Text
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
+	Slug             string
+	// Curriculum chapter/section title for grouping topic milestones
+	Chapter pgtype.Text
+	// CHAPTER = section overview; TOPIC = concrete learning unit
+	Kind string
 }
 
 type MilestoneProposal struct {
@@ -768,6 +1004,20 @@ type Notification struct {
 	CreatedAt  pgtype.Timestamptz
 }
 
+type Payment struct {
+	ID                int64
+	PublicID          uuid.UUID
+	UserID            int64
+	RazorpayOrderID   string
+	RazorpayPaymentID pgtype.Text
+	Amount            int32
+	Currency          string
+	Status            PaymentStatus
+	Receipt           string
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}
+
 type Pod struct {
 	ID          int64
 	PublicID    uuid.UUID
@@ -788,6 +1038,45 @@ type PodMembership struct {
 	Status    UserPodMembershipStatus
 	JoinedAt  pgtype.Timestamptz
 	CreatedAt pgtype.Timestamptz
+	Role      PodMemberRole
+}
+
+type PodQuiz struct {
+	ID                   int64
+	PublicID             uuid.UUID
+	PodID                int64
+	UserID               int64
+	SkillID              int64
+	Status               PodQuizStatus
+	TopicCount           int32
+	CorrectCount         int32
+	Score                int32
+	CompletedTopicTitles []byte
+	CreatedAt            pgtype.Timestamptz
+	CompletedAt          pgtype.Timestamptz
+}
+
+type PodQuizAnswer struct {
+	ID              int64
+	QuizID          int64
+	QuestionID      int64
+	SelectedIndices []byte
+	IsCorrect       bool
+	StartedAt       pgtype.Timestamptz
+	AnsweredAt      pgtype.Timestamptz
+	TimedOut        bool
+}
+
+type PodQuizQuestion struct {
+	ID             int64
+	QuizID         int64
+	OrderIndex     int32
+	Difficulty     int32
+	Prompt         string
+	Options        []byte
+	CorrectIndices []byte
+	TopicTitle     string
+	Weight         int32
 }
 
 type ProposalVote struct {
@@ -819,6 +1108,23 @@ type Roadmap struct {
 	UpdatedAt        pgtype.Timestamptz
 }
 
+type RoadmapEditRequest struct {
+	ID                int64
+	PublicID          uuid.UUID
+	SkillID           int64
+	RequesterID       int64
+	Rationale         pgtype.Text
+	Status            CatalogRequestStatus
+	BaseVersionNumber int32
+	DraftMilestones   []byte
+	AdminNote         pgtype.Text
+	ReviewedBy        pgtype.Int8
+	ReviewedAt        pgtype.Timestamptz
+	CreatedVersionID  pgtype.Int8
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}
+
 type RoadmapVersion struct {
 	ID            int64
 	RoadmapID     pgtype.Int8
@@ -837,6 +1143,24 @@ type Skill struct {
 	IsActive    bool
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
+}
+
+type SkillCreationRequest struct {
+	ID              int64
+	PublicID        uuid.UUID
+	RequesterID     int64
+	Name            string
+	SlugCandidate   string
+	Description     pgtype.Text
+	Status          CatalogRequestStatus
+	SimilarSkills   []byte
+	DraftMilestones []byte
+	AdminNote       pgtype.Text
+	ReviewedBy      pgtype.Int8
+	ReviewedAt      pgtype.Timestamptz
+	CreatedSkillID  pgtype.Int8
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
 }
 
 type Streak struct {
@@ -873,6 +1197,8 @@ type User struct {
 	DeletedAt         pgtype.Timestamptz
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
+	// Platform role: USER or ADMIN. ADMIN is bootstrapped from ADMIN_USERNAMES.
+	Role UserRole
 }
 
 type UserIdentity struct {
@@ -892,6 +1218,19 @@ type UserMilestoneProgress struct {
 	Status         ProgressStatus
 	CompletedAt    pgtype.Timestamptz
 	PostponedUntil pgtype.Timestamptz
+}
+
+type UserSession struct {
+	ID               int64
+	PublicID         uuid.UUID
+	UserID           int64
+	RefreshTokenHash string
+	UserAgent        pgtype.Text
+	IpAddress        *netip.Addr
+	ExpiresAt        pgtype.Timestamptz
+	RevokedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 }
 
 type UsernameHistory struct {

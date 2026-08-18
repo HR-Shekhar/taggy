@@ -58,6 +58,30 @@ func (q *Queries) CreateIdentity(ctx context.Context, arg CreateIdentityParams) 
 	return i, err
 }
 
+const getIdentityByEmail = `-- name: GetIdentityByEmail :one
+SELECT ui.id, ui.user_id, ui.provider, ui.provider_user_id, ui.password_hash, ui.created_at, ui.updated_at
+FROM user_identity ui
+INNER JOIN users u ON u.id = ui.user_id
+WHERE u.email = $1
+  AND ui.provider = 'local'
+  AND u.is_deleted = FALSE
+`
+
+func (q *Queries) GetIdentityByEmail(ctx context.Context, email string) (UserIdentity, error) {
+	row := q.db.QueryRow(ctx, getIdentityByEmail, email)
+	var i UserIdentity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.PasswordHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getIdentityByID = `-- name: GetIdentityByID :one
 
 SELECT id, user_id, provider, provider_user_id, password_hash, created_at, updated_at

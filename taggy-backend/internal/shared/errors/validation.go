@@ -1,9 +1,9 @@
 package errors
 
 type ValidationError struct {
-    Fields map[string]string
+	Fields map[string]string
 }
 
 func (e ValidationError) Error() string {
-    return "validation failed"
+	return "validation failed"
 }
