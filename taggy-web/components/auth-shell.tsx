@@ -20,7 +20,7 @@ export function AuthPair() {
 
   return (
     <AuthChrome>
-      <div className="relative w-full max-w-4xl overflow-hidden bg-card/70 shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md lg:h-[min(28rem,calc(100dvh-5.5rem))]">
+      <div className="relative w-full max-w-3xl overflow-hidden bg-card/70 shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md lg:h-[min(27rem,calc(100dvh-5.5rem))]">
         {/* Login stays on the left */}
         <div
           className={cn(
@@ -104,7 +104,7 @@ function AuthChrome({ children }: { children: ReactNode }) {
         <ThemeToggle />
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 py-2 sm:px-6 lg:overflow-hidden">
+      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-12 pt-4 sm:px-6 lg:overflow-hidden lg:pb-16">
         {children}
       </main>
     </div>
@@ -328,7 +328,7 @@ export function AuthForm({
 }) {
   return (
     <form
-      className="flex h-full flex-col justify-center px-7 py-6 sm:px-9 lg:py-5"
+      className="flex h-full flex-col justify-center overflow-y-auto px-6 py-5 sm:px-8 lg:py-5"
       onSubmit={async (e) => {
         e.preventDefault();
         await onSubmit(e);
@@ -348,7 +348,7 @@ export function AuthForm({
 
       <div className="space-y-3">{children}</div>
 
-      <div className="mt-5 flex flex-col items-center gap-3">
+      <div className="mt-4 flex shrink-0 flex-col items-center gap-3 pb-1">
         <Button
           type="submit"
           disabled={busy}
@@ -406,7 +406,7 @@ export function AuthShell({
 }) {
   return (
     <AuthChrome>
-      <div className="relative w-full max-w-4xl overflow-hidden shadow-2xl ring-1 ring-foreground/10 lg:h-[min(28rem,calc(100dvh-5.5rem))]">
+      <div className="relative w-full max-w-3xl overflow-hidden shadow-2xl ring-1 ring-foreground/10 lg:h-[min(27rem,calc(100dvh-5.5rem))]">
         <div className="bg-card/50 lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2">
           <AuthForm
             title={title}
