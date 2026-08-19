@@ -637,6 +637,7 @@ export async function getAudioRoom(roomId: string | number) {
   return api<{
     room: {
       id: string;
+      entity_id?: number;
       title: string;
       status: string;
       host_username?: string;
