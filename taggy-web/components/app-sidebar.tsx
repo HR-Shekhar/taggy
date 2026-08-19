@@ -46,6 +46,21 @@ function isChatSurface(pathname: string) {
   return false;
 }
 
+function SidebarBackground() {
+  return (
+    <>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[url('/images/sidebar.jpg')] bg-cover bg-bottom bg-no-repeat"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-sidebar/5 via-sidebar/60 to-sidebar"
+      />
+    </>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { isAdmin } = useAuth();
@@ -166,7 +181,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         chatSurface ? "h-dvh overflow-hidden" : "min-h-dvh"
       )}
     >
-      <aside className="relative sticky top-0 z-20 hidden h-dvh w-60 shrink-0 flex-col overflow-hidden border-r border-border/70 bg-sidebar/80 px-3 py-5 text-sidebar-foreground backdrop-blur-md md:flex">
+      <aside className="relative sticky top-0 z-20 hidden h-dvh w-60 shrink-0 flex-col overflow-hidden border-r border-border/70 px-3 py-5 text-sidebar-foreground md:flex">
+        <SidebarBackground />
         <div className="relative z-10 flex h-full min-h-0 flex-col">
           <SidebarBody />
         </div>
@@ -202,8 +218,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
-          className="relative flex w-[min(18rem,85vw)] flex-col overflow-hidden bg-sidebar/80 p-4 backdrop-blur-md"
+          className="relative flex w-[min(18rem,85vw)] flex-col overflow-hidden p-4"
         >
+          <SidebarBackground />
           <div className="relative z-10 flex h-full min-h-0 flex-col">
             <SheetHeader className="sr-only">
               <SheetTitle>Navigation</SheetTitle>
