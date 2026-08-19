@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "golang",
+  "packages": {
+    "go": "1.26"
+  },
+  "steps": {
+    "build": {
+      "commands": [
+        {
+          "cmd": "go build -ldflags=\"-w -s\" -o out ./taggy-backend/cmd/api",
+          "customName": "Build Taggy API"
+        }
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "./out"
+  }
+}
