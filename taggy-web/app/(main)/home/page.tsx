@@ -219,7 +219,7 @@ export default function HomePage() {
         </form>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3" data-tour="home-cta">
         <Link href={primaryCta.href} className={cn(buttonVariants(), "gap-1.5")}>
           {primaryCta.label}
           <ArrowRight className="size-4" />

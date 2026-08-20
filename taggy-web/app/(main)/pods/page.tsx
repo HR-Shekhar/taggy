@@ -261,7 +261,7 @@ function PodsInner() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-tour="pods-create">
           <CardHeader>
             <CardTitle className="font-serif text-lg">Create pod</CardTitle>
             <CardDescription>Start a small group (max 7).</CardDescription>

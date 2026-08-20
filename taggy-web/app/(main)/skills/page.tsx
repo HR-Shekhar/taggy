@@ -174,7 +174,7 @@ export default function SkillsPage() {
             description="Request a new skill below to get started."
           />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2" data-tour="skills-catalog">
             {skills.map((s) => {
               const enrolled = enrolledBySlug.get(s.slug);
               return (
@@ -241,79 +241,81 @@ export default function SkillsPage() {
       </Section>
 
       <Section title="Request a new skill">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-serif text-lg">Suggest a skill</CardTitle>
-            <CardDescription>
-              AI drafts a course-style outline for admin review. Generation may
-              take a few minutes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <input
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              placeholder="Skill name"
-              value={reqName}
-              onChange={(e) => {
-                setReqName(e.target.value);
-              }}
-              disabled={reqBusy}
-            />
-            <textarea
-              className="min-h-20 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              placeholder="Short description (optional)"
-              value={reqDesc}
-              onChange={(e) => setReqDesc(e.target.value)}
-              disabled={reqBusy}
-            />
-            <GenerationWaitNote active={reqBusy} />
-            {similar && similar.length > 0 ? (
-              <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-                <p className="text-sm font-medium">
-                  Similar skills already exist
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Review these first, or confirm if you still want a new skill.
-                </p>
-                <ul className="space-y-1 text-sm">
-                  {similar.map((s) => (
-                    <li key={s.slug}>
-                      <Link href={`/skills/${s.slug}`} className="underline">
-                        {s.name}
-                      </Link>
-                      <span className="text-muted-foreground">
-                        {" "}
-                        · score {s.score.toFixed(2)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+        <div data-tour="skills-request">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-serif text-lg">Suggest a skill</CardTitle>
+              <CardDescription>
+                AI drafts a course-style outline for admin review. Generation may
+                take a few minutes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <input
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                placeholder="Skill name"
+                value={reqName}
+                onChange={(e) => {
+                  setReqName(e.target.value);
+                }}
+                disabled={reqBusy}
+              />
+              <textarea
+                className="min-h-20 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                placeholder="Short description (optional)"
+                value={reqDesc}
+                onChange={(e) => setReqDesc(e.target.value)}
+                disabled={reqBusy}
+              />
+              <GenerationWaitNote active={reqBusy} />
+              {similar && similar.length > 0 ? (
+                <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+                  <p className="text-sm font-medium">
+                    Similar skills already exist
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Review these first, or confirm if you still want a new skill.
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    {similar.map((s) => (
+                      <li key={s.slug}>
+                        <Link href={`/skills/${s.slug}`} className="underline">
+                          {s.name}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · score {s.score.toFixed(2)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={reqBusy || reqName.trim().length < 3}
+                    onClick={() => void submitSkillRequest(true)}
+                  >
+                    Submit anyway
+                  </Button>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  size="sm"
-                  variant="outline"
                   disabled={reqBusy || reqName.trim().length < 3}
-                  onClick={() => void submitSkillRequest(true)}
+                  onClick={() => void submitSkillRequest(false)}
                 >
-                  Submit anyway
+                  {reqBusy ? "Generating…" : "Check & submit"}
                 </Button>
+                <Link
+                  href="/requests"
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                >
+                  View my requests
+                </Link>
               </div>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={reqBusy || reqName.trim().length < 3}
-                onClick={() => void submitSkillRequest(false)}
-              >
-                {reqBusy ? "Generating…" : "Check & submit"}
-              </Button>
-              <Link
-                href="/requests"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                View my requests
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </Section>
     </div>
   );

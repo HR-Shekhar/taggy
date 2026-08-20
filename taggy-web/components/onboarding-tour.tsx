@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useMemo,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -45,86 +46,75 @@ type StepDef = {
   id: TourStepId;
   title: string;
   body: string;
-  /** Preferred page for this tip */
   href?: string;
-  /** data-tour target to spotlight */
-  target: string;
-  ctaLabel?: string;
-  /** If true, Next advances; else CTA navigates first */
-  nextAdvances?: boolean;
+  /** Preferred data-tour targets (first match in DOM wins) */
+  targets: string[];
+  ctaLabel: string;
 };
 
 const STEPS: Record<TourStepId, StepDef> = {
   home_overview: {
     id: "home_overview",
-    title: "Welcome to your Home",
-    body: "This is your hub: continue a skill, check your streak and study time, search Taggy, jump into pods, and see unread alerts. Use the sidebar anytime to move around.",
+    title: "Your Home hub",
+    body: "From here you continue skills, check streaks, search, and jump into pods. Next, open Skills in the sidebar (or tap below) to join or request a roadmap.",
     href: "/home",
-    target: "home-main",
-    ctaLabel: "Next: pick a skill",
-    nextAdvances: true,
+    targets: ["home-cta", "nav-home", "home-main"],
+    ctaLabel: "Go to Skills",
   },
   skills_join_or_request: {
     id: "skills_join_or_request",
-    title: "Join a skill or request a roadmap",
-    body: "Browse the catalog and join a skill you want to learn. Prefer something new? Request a roadmap for your skill — Taggy will generate a followable path.",
+    title: "Join or request a skill",
+    body: "Click Join on a catalog skill, or use Request a new skill below to generate a roadmap for something you want to learn.",
     href: "/skills",
-    target: "skills-page",
-    ctaLabel: "Got it",
-    nextAdvances: true,
+    targets: ["skills-request", "skills-catalog", "nav-skills", "skills-page"],
+    ctaLabel: "Continue",
   },
   skills_waiting: {
     id: "skills_waiting",
-    title: "Enroll to continue",
-    body: "Join a skill from the list, or submit a request and wait until it’s approved. This tip advances automatically once you have at least one skill.",
+    title: "Enroll to keep going",
+    body: "Join a skill (or wait for your request to be approved). Click a Join button on this page — this tip advances once you have a skill.",
     href: "/skills",
-    target: "nav-skills",
+    targets: ["skills-catalog", "nav-skills", "skills-page"],
     ctaLabel: "I’ve joined — continue",
-    nextAdvances: true,
   },
   pods_join_or_create: {
     id: "pods_join_or_create",
-    title: "Find or create a pod",
-    body: "Pods are small accountability groups for a skill. Join an open pod or create your own so you can chat, study live, and stay consistent together.",
+    title: "Find your pod",
+    body: "Click Pods in the sidebar, then join an open pod or create one for your skill so you can chat and study together.",
     href: "/pods",
-    target: "pods-page",
-    ctaLabel: "Got it",
-    nextAdvances: true,
+    targets: ["pods-create", "pods-page", "nav-pods"],
+    ctaLabel: "Continue",
   },
   pods_waiting: {
     id: "pods_waiting",
     title: "Join or create a pod",
-    body: "Request to join a pod (or create one). Once you’re accepted, we’ll show you what’s inside. Advances automatically when you have an accepted pod.",
+    body: "Use Join / Create on this page. Once you’re accepted into a pod, we’ll open it and show what’s inside.",
     href: "/pods",
-    target: "nav-pods",
+    targets: ["pods-create", "pods-page", "nav-pods"],
     ctaLabel: "I’m in a pod — continue",
-    nextAdvances: true,
   },
   pod_features: {
     id: "pod_features",
     title: "Inside your pod",
-    body: "Here you get group chat, live audio rooms, member roles, join requests (if you lead), and pod quizzes/leaderboards. Stay connected — audio and chat can keep running while you browse.",
-    target: "pod-workspace",
-    ctaLabel: "Next: community",
-    nextAdvances: true,
+    body: "Use chat, start audio rooms, manage members, and try the pod quiz/leaderboard. Click around here — then continue to Community.",
+    targets: ["pod-workspace", "nav-pods"],
+    ctaLabel: "Go to Community",
   },
   community_leaderboards: {
     id: "community_leaderboards",
     title: "Community & leaderboards",
-    body: "Open Community for skill-wide channels. Leaderboards on Home, Progress, and inside pods show how you stack up — great motivation with your group.",
+    body: "Click a skill community to open channels. Leaderboards also show on Home and inside pods — open Community from the sidebar anytime.",
     href: "/community",
-    target: "community-page",
+    targets: ["community-page", "nav-community"],
     ctaLabel: "Finish tour",
-    nextAdvances: true,
   },
   done: {
     id: "done",
     title: "You’re set",
-    body: "You know the path: skill → roadmap → pod → community. Explore Progress to mark topics done, and watch Notifications for updates.",
+    body: "Path to remember: skill → roadmap → pod → community. Click Home when you’re ready to start learning.",
     href: "/home",
-    target: "nav-home",
-    ctaLabel: "Start learning",
-    nextAdvances: true,
+    targets: ["nav-home", "home-cta"],
+    ctaLabel: "Go to Home",
   },
 };
 
@@ -142,23 +132,37 @@ export function useOnboarding() {
   return useContext(OnboardingContext);
 }
 
-function readDone() {
+function doneKey(username: string) {
+  return `${ONBOARDING_DONE_KEY}:${username}`;
+}
+function stepKey(username: string) {
+  return `${ONBOARDING_STEP_KEY}:${username}`;
+}
+
+function readDone(username: string) {
   if (typeof window === "undefined") return true;
-  return window.localStorage.getItem(ONBOARDING_DONE_KEY) === "1";
+  if (window.localStorage.getItem(doneKey(username)) === "1") return true;
+  // Legacy global flag from earlier tour
+  if (window.localStorage.getItem(ONBOARDING_DONE_KEY) === "1") return true;
+  return false;
 }
 
-function readStep(): TourStepId {
-  if (typeof window === "undefined") return "home_overview";
-  const raw = window.localStorage.getItem(ONBOARDING_STEP_KEY);
+function readStep(username: string): TourStepId | null {
+  if (typeof window === "undefined") return null;
+  const raw =
+    window.localStorage.getItem(stepKey(username)) ??
+    window.localStorage.getItem(ONBOARDING_STEP_KEY);
   if (raw && STEP_ORDER.includes(raw as TourStepId)) return raw as TourStepId;
-  return "home_overview";
+  return null;
 }
 
-function writeStep(id: TourStepId) {
-  window.localStorage.setItem(ONBOARDING_STEP_KEY, id);
+function writeStep(username: string, id: TourStepId) {
+  window.localStorage.setItem(stepKey(username), id);
 }
 
-function markDone() {
+function markDone(username: string) {
+  window.localStorage.setItem(doneKey(username), "1");
+  window.localStorage.removeItem(stepKey(username));
   window.localStorage.setItem(ONBOARDING_DONE_KEY, "1");
   window.localStorage.removeItem(ONBOARDING_STEP_KEY);
   window.dispatchEvent(new Event("taggy-onboarding-done"));
@@ -168,44 +172,114 @@ function stepIndex(id: TourStepId) {
   return STEP_ORDER.indexOf(id);
 }
 
-type SpotlightRect = { top: number; left: number; width: number; height: number };
+type SpotlightRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
 
-function useTargetRect(target: string | null, active: boolean) {
+function findTargetEl(targets: string[]) {
+  for (const id of targets) {
+    const el = document.querySelector(`[data-tour="${id}"]`);
+    if (el instanceof HTMLElement) {
+      const r = el.getBoundingClientRect();
+      // Prefer visible, reasonably sized targets
+      if (r.width > 0 && r.height > 0) return el;
+    }
+  }
+  return null;
+}
+
+function useTargetRect(targets: string[], active: boolean) {
   const [rect, setRect] = useState<SpotlightRect | null>(null);
 
   const measure = useCallback(() => {
-    if (!target || !active) {
+    if (!active || targets.length === 0) {
       setRect(null);
       return;
     }
-    const el = document.querySelector(`[data-tour="${target}"]`);
+    const el = findTargetEl(targets);
     if (!el) {
       setRect(null);
       return;
     }
     const r = el.getBoundingClientRect();
+    // Cap spotlight size so giant page wrappers don't swallow the UI
+    const maxW = Math.min(r.width, Math.min(420, window.innerWidth - 32));
+    const maxH = Math.min(r.height, Math.min(280, window.innerHeight - 32));
     setRect({
       top: r.top,
       left: r.left,
-      width: r.width,
-      height: r.height,
+      width: maxW,
+      height: maxH,
     });
-  }, [target, active]);
+  }, [targets, active]);
 
   useLayoutEffect(() => {
-    measure();
     if (!active) return;
+    const el = findTargetEl(targets);
+    el?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    measure();
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
-    const t = window.setInterval(measure, 500);
+    const t = window.setInterval(measure, 400);
     return () => {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
       window.clearInterval(t);
     };
-  }, [measure, active]);
+  }, [measure, active, targets]);
 
   return rect;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function tipPosition(rect: SpotlightRect | null): CSSProperties {
+  const tipW = Math.min(352, window.innerWidth - 24);
+  const tipH = 240;
+  const margin = 12;
+
+  if (!rect) {
+    return {
+      position: "fixed",
+      right: margin,
+      bottom: margin,
+      width: tipW,
+    };
+  }
+
+  const spaceRight = window.innerWidth - (rect.left + rect.width);
+  const spaceBelow = window.innerHeight - (rect.top + rect.height);
+
+  let top: number;
+  let left: number;
+
+  // Prefer to the right of sidebar-sized targets
+  if (spaceRight > tipW + 24 && rect.width < 280) {
+    left = rect.left + rect.width + 14;
+    top = rect.top;
+  } else if (spaceBelow > tipH + 16) {
+    left = rect.left;
+    top = rect.top + rect.height + 14;
+  } else {
+    // Place above or pinned to lower viewport
+    left = rect.left;
+    top = rect.top - tipH - 14;
+  }
+
+  left = clamp(left, margin, window.innerWidth - tipW - margin);
+  top = clamp(top, margin, window.innerHeight - tipH - margin);
+
+  return {
+    position: "fixed",
+    top,
+    left,
+    width: tipW,
+  };
 }
 
 function Coachmark({
@@ -225,50 +299,29 @@ function Coachmark({
   onGoThere: () => void;
   needsNavigate: boolean;
 }) {
-  const rect = useTargetRect(step.target, true);
-  const pad = 8;
-
-  const tipStyle = useMemo(() => {
-    if (!rect) {
-      return { bottom: 24, right: 24 } as const;
-    }
-    const spaceBelow = window.innerHeight - (rect.top + rect.height);
-    const preferBelow = spaceBelow > 220;
-    const left = Math.min(
-      Math.max(16, rect.left),
-      window.innerWidth - 340
-    );
-    if (preferBelow) {
-      return {
-        top: rect.top + rect.height + pad + 12,
-        left,
-      } as const;
-    }
-    return {
-      bottom: Math.max(16, window.innerHeight - rect.top + 12),
-      left,
-    } as const;
-  }, [rect]);
+  const rect = useTargetRect(step.targets, true);
+  const pad = 6;
+  const style = useMemo(() => tipPosition(rect), [rect]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[55]">
+    <div className="pointer-events-none fixed inset-0 z-[55] overflow-hidden">
       {rect ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-background transition-all duration-200"
+          className="pointer-events-none absolute rounded-xl ring-2 ring-primary/90 ring-offset-2 ring-offset-background"
           style={{
             top: rect.top - pad,
             left: rect.left - pad,
             width: rect.width + pad * 2,
             height: rect.height + pad * 2,
-            boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.28)",
+            boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.22)",
           }}
         />
       ) : null}
 
       <div
-        className="pointer-events-auto absolute w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-4 shadow-xl"
-        style={tipStyle}
+        className="pointer-events-auto z-[56] max-h-[min(70vh,22rem)] overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-xl"
+        style={style}
         role="dialog"
         aria-labelledby="tour-title"
       >
@@ -283,21 +336,26 @@ function Coachmark({
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {needsNavigate ? (
-            <Button type="button" size="sm" className="gap-1.5" onClick={onGoThere}>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5"
+              onClick={onGoThere}
+            >
               Take me there
               <ArrowRight className="size-3.5" />
             </Button>
           ) : (
-            <Button type="button" size="sm" className="gap-1.5" onClick={onNext}>
-              {step.ctaLabel ?? "Next"}
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5"
+              onClick={onNext}
+            >
+              {step.ctaLabel}
               <ArrowRight className="size-3.5" />
             </Button>
           )}
-          {!needsNavigate && step.href && step.id !== "done" ? (
-            <Button type="button" size="sm" variant="outline" onClick={onNext}>
-              Next
-            </Button>
-          ) : null}
           <Button type="button" size="sm" variant="ghost" onClick={onSkip}>
             Skip tour
           </Button>
@@ -308,7 +366,7 @@ function Coachmark({
 }
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const { username } = useAuth();
+  const { username, ready } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [active, setActive] = useState(false);
@@ -316,47 +374,95 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [acceptedPodSlug, setAcceptedPodSlug] = useState<string | null>(null);
   const [skillCount, setSkillCount] = useState(0);
   const [podCount, setPodCount] = useState(0);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
+  // New users only: per-username flag; skip if they already have skills/pods
   useEffect(() => {
-    if (readDone()) {
-      setActive(false);
-      setStepId(null);
-      return;
-    }
-    const s = readStep();
-    setStepId(s);
-    setActive(true);
-  }, []);
+    if (!ready || !username) return;
+    let cancelled = false;
 
-  const goToStep = useCallback((id: TourStepId) => {
-    writeStep(id);
-    setStepId(id);
-    setActive(true);
-  }, []);
+    (async () => {
+      if (readDone(username)) {
+        if (!cancelled) {
+          setActive(false);
+          setStepId(null);
+          setBootstrapped(true);
+        }
+        return;
+      }
+
+      const inProgress = readStep(username);
+      const [sk, pd] = await Promise.all([
+        listMySkills(username),
+        listMyPods(username),
+      ]);
+      if (cancelled) return;
+
+      const skills = sk.ok ? sk.data ?? [] : [];
+      const pods = pd.ok
+        ? Array.isArray(pd.data)
+          ? pd.data
+          : ((pd.data as { pods?: { status?: string }[] })?.pods ?? [])
+        : [];
+      const accepted = pods.filter(
+        (p) => (p.status ?? "ACCEPTED") === "ACCEPTED"
+      );
+
+      setSkillCount(skills.length);
+      setPodCount(accepted.length);
+      const first = accepted[0] as
+        | { pod_slug?: string; slug?: string }
+        | undefined;
+      setAcceptedPodSlug(first?.pod_slug ?? first?.slug ?? null);
+
+      // Existing users (already enrolled) — never show tour unless mid-tour
+      if (!inProgress && (skills.length > 0 || accepted.length > 0)) {
+        markDone(username);
+        setActive(false);
+        setStepId(null);
+        setBootstrapped(true);
+        return;
+      }
+
+      const start = inProgress ?? "home_overview";
+      writeStep(username, start);
+      setStepId(start);
+      setActive(true);
+      setBootstrapped(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, username]);
+
+  const goToStep = useCallback(
+    (id: TourStepId) => {
+      if (!username) return;
+      writeStep(username, id);
+      setStepId(id);
+      setActive(true);
+    },
+    [username]
+  );
 
   const skip = useCallback(() => {
-    markDone();
+    if (!username) return;
+    markDone(username);
     setActive(false);
     setStepId(null);
-  }, []);
+  }, [username]);
 
   const advanceFrom = useCallback(
     (current: TourStepId) => {
       const i = stepIndex(current);
       if (i < 0 || i >= STEP_ORDER.length - 1) {
-        markDone();
-        setActive(false);
-        setStepId(null);
+        skip();
         return;
       }
-      const nextId = STEP_ORDER[i + 1];
-      if (nextId === "done") {
-        goToStep("done");
-        return;
-      }
-      goToStep(nextId);
+      goToStep(STEP_ORDER[i + 1]);
     },
-    [goToStep]
+    [goToStep, skip]
   );
 
   const next = useCallback(() => {
@@ -368,10 +474,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     advanceFrom(stepId);
   }, [stepId, advanceFrom, skip]);
 
-  // Poll enrollment so waiting steps can auto-advance
   useEffect(() => {
     if (!active || !username) return;
-
     let cancelled = false;
     async function refresh() {
       const [sk, pd] = await Promise.all([
@@ -381,7 +485,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const skills = sk.ok ? sk.data ?? [] : [];
       setSkillCount(skills.length);
-
       const pods = pd.ok
         ? Array.isArray(pd.data)
           ? pd.data
@@ -395,7 +498,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       const first = accepted[0];
       setAcceptedPodSlug(first?.pod_slug ?? first?.slug ?? null);
     }
-
     void refresh();
     const t = window.setInterval(() => void refresh(), 4000);
     return () => {
@@ -404,7 +506,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     };
   }, [active, username]);
 
-  // Auto-advance waiting steps
   useEffect(() => {
     if (!active || !stepId) return;
     if (stepId === "skills_waiting" && skillCount > 0) {
@@ -415,56 +516,27 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
   }, [active, stepId, skillCount, podCount, goToStep]);
 
-  // Skip waiting if user already has progress when landing on those steps
-  useEffect(() => {
-    if (!active || !stepId) return;
-    if (stepId === "skills_join_or_request" && skillCount > 0) {
-      // Still show join tip briefly is ok; auto-skip waiting later
-    }
-    if (stepId === "skills_waiting" && skillCount > 0) {
-      goToStep("pods_join_or_create");
-    }
-    if (
-      (stepId === "pods_join_or_create" || stepId === "pods_waiting") &&
-      podCount > 0 &&
-      stepId === "pods_waiting"
-    ) {
-      goToStep("pod_features");
-    }
-  }, [active, stepId, skillCount, podCount, goToStep]);
-
   const step = stepId ? STEPS[stepId] : null;
 
   const onPreferredRoute = useMemo(() => {
     if (!step) return true;
-    if (step.id === "pod_features") {
-      return /^\/pods\/[^/]+/.test(pathname);
-    }
-    if (step.id === "skills_waiting") {
-      return pathname.startsWith("/skills");
-    }
-    if (step.id === "pods_waiting") {
-      return pathname.startsWith("/pods");
-    }
+    if (step.id === "pod_features") return /^\/pods\/[^/]+/.test(pathname);
+    if (step.id === "skills_waiting") return pathname.startsWith("/skills");
+    if (step.id === "pods_waiting") return pathname.startsWith("/pods");
     if (!step.href) return true;
     if (step.href === "/home") return pathname === "/home";
-    return pathname === step.href || pathname.startsWith(step.href + "/");
+    return pathname === step.href || pathname.startsWith(`${step.href}/`);
   }, [step, pathname]);
 
   const goThere = useCallback(() => {
     if (!step) return;
     if (step.id === "pod_features") {
-      if (acceptedPodSlug) {
-        router.push(`/pods/${acceptedPodSlug}`);
-      } else {
-        router.push("/pods");
-      }
+      router.push(acceptedPodSlug ? `/pods/${acceptedPodSlug}` : "/pods");
       return;
     }
     if (step.href) router.push(step.href);
   }, [step, acceptedPodSlug, router]);
 
-  // When advancing into pod_features, navigate into a pod if possible
   useEffect(() => {
     if (!active || stepId !== "pod_features") return;
     if (!/^\/pods\/[^/]+/.test(pathname) && acceptedPodSlug) {
@@ -472,57 +544,40 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
   }, [active, stepId, pathname, acceptedPodSlug, router]);
 
-  // When advancing into community, nudge to /community
-  useEffect(() => {
-    if (!active || stepId !== "community_leaderboards") return;
-    if (!pathname.startsWith("/community")) {
-      // don't force-nav; tip offers Take me there if off-route
-    }
-  }, [active, stepId, pathname]);
-
   const value = useMemo(
-    () => ({
-      active,
-      stepId,
-      skip,
-      next,
-      goToStep,
-    }),
+    () => ({ active, stepId, skip, next, goToStep }),
     [active, stepId, skip, next, goToStep]
   );
-
-  const tipStepTotal = STEP_ORDER.length;
-  const tipStepNum = stepId ? stepIndex(stepId) + 1 : 0;
 
   return (
     <OnboardingContext.Provider value={value}>
       {children}
-      {active && step ? (
+      {bootstrapped && active && step ? (
         <Coachmark
           step={step}
-          stepNum={tipStepNum}
-          stepTotal={tipStepTotal}
+          stepNum={stepIndex(step.id) + 1}
+          stepTotal={STEP_ORDER.length}
           onSkip={skip}
+          needsNavigate={!onPreferredRoute}
+          onGoThere={goThere}
           onNext={() => {
             if (step.id === "done") {
               skip();
-              if (step.href) router.push(step.href);
-              return;
-            }
-            // After join/request tips, move to waiting; after features go community
-            if (step.id === "skills_join_or_request") {
-              if (skillCount > 0) goToStep("pods_join_or_create");
-              else goToStep("skills_waiting");
-              return;
-            }
-            if (step.id === "pods_join_or_create") {
-              if (podCount > 0) goToStep("pod_features");
-              else goToStep("pods_waiting");
+              router.push("/home");
               return;
             }
             if (step.id === "home_overview") {
               goToStep("skills_join_or_request");
               router.push("/skills");
+              return;
+            }
+            if (step.id === "skills_join_or_request") {
+              goToStep(skillCount > 0 ? "pods_join_or_create" : "skills_waiting");
+              if (skillCount > 0) router.push("/pods");
+              return;
+            }
+            if (step.id === "pods_join_or_create") {
+              goToStep(podCount > 0 ? "pod_features" : "pods_waiting");
               return;
             }
             if (step.id === "pod_features") {
@@ -536,20 +591,16 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
             }
             next();
           }}
-          onGoThere={goThere}
-          needsNavigate={!onPreferredRoute}
         />
       ) : null}
     </OnboardingContext.Provider>
   );
 }
 
-/** @deprecated checklist removed — tour owns guidance */
 export function OnboardingChecklist() {
   return null;
 }
 
-/** Mounted tip host kept for layout compatibility */
 export function OnboardingTour() {
   return null;
 }
