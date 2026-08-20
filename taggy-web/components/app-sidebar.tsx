@@ -51,11 +51,11 @@ function SidebarBackground() {
     <>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[url('/images/sidebar.jpg')] bg-cover bg-bottom bg-no-repeat"
+        className="pointer-events-none absolute inset-0 bg-[url('/images/sidebar.jpg')] bg-cover bg-bottom bg-no-repeat opacity-40 dark:opacity-30"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-sidebar/5 via-sidebar/60 to-sidebar"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/95 to-sidebar"
       />
     </>
   );
@@ -69,7 +69,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     : links;
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-0.5">
       {nav.map(({ href, label, icon: Icon }) => {
         const active =
           pathname === href || (href !== "/home" && pathname.startsWith(href));
@@ -81,15 +81,15 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={href}
             onClick={onNavigate}
             className={cn(
-              "inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
-              isPremium && "mt-2 border border-primary/20 bg-primary/5",
+              "inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              isPremium && "mt-2",
               active
                 ? isAdminLink
                   ? "bg-amber-500/20 text-foreground"
-                  : "bg-secondary text-foreground"
+                  : "bg-primary/15 text-foreground"
                 : isAdminLink
                   ? "text-amber-800 hover:bg-amber-500/10 dark:text-amber-200"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             )}
           >
             <Icon className="size-4 shrink-0" />
@@ -122,14 +122,14 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <NavLinks onNavigate={onNavigate} />
       </div>
 
-      <div className="shrink-0 space-y-3 border-t border-border/70 pt-4">
+      <div className="shrink-0 space-y-3 border-t border-sidebar-border pt-4">
         <button
           type="button"
           onClick={() => {
             onNavigate?.();
             router.push(`/u/${username}`);
           }}
-          className="flex w-full min-w-0 items-center gap-2 rounded-lg px-1 py-1 text-left hover:bg-muted"
+          className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-sidebar-accent"
         >
           <UserAvatar
             username={username}
@@ -140,7 +140,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           <span className="truncate text-sm">@{username}</span>
         </button>
         <ThemeModeSwitch />
-        <div className="grid gap-1">
+        <div className="grid gap-0.5">
           <Button
             variant="ghost"
             className="justify-start gap-2"
@@ -181,7 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         chatSurface ? "h-dvh overflow-hidden" : "min-h-dvh"
       )}
     >
-      <aside className="relative sticky top-0 z-20 hidden h-dvh w-60 shrink-0 flex-col overflow-hidden border-r border-border/70 px-3 py-5 text-sidebar-foreground md:flex">
+      <aside className="relative sticky top-0 z-20 hidden h-dvh w-60 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground md:flex">
         <SidebarBackground />
         <div className="relative z-10 flex h-full min-h-0 flex-col">
           <SidebarBody />
@@ -189,7 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="sticky top-0 z-40 flex h-12 shrink-0 items-center gap-3 border-b border-border/70 bg-background/80 px-3 backdrop-blur-md md:hidden">
+        <div className="sticky top-0 z-40 flex h-12 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-3 md:hidden">
           <Button
             variant="ghost"
             size="icon"
@@ -218,7 +218,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
-          className="relative flex w-[min(18rem,85vw)] flex-col overflow-hidden p-4"
+          className="relative flex w-[min(18rem,85vw)] flex-col overflow-hidden bg-sidebar p-4 text-sidebar-foreground"
         >
           <SidebarBackground />
           <div className="relative z-10 flex h-full min-h-0 flex-col">

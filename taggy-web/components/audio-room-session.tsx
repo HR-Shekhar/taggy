@@ -165,7 +165,7 @@ export function AudioRoomSession({
         title="Report audio room"
         description="Report this room for spam, harassment, or other abuse."
       />
-      <Card className="rounded-xl ring-1 ring-foreground/10">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

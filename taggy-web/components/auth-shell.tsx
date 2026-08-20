@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FormEvent, ReactNode, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { GoogleIconButton } from "@/components/google-button";
@@ -20,11 +20,11 @@ export function AuthPair() {
 
   return (
     <AuthChrome>
-      <div className="relative w-full max-w-3xl overflow-hidden bg-card/70 shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md lg:h-[min(27rem,calc(100dvh-5.5rem))]">
+      <div className="relative w-full max-w-3xl overflow-hidden bg-card shadow-2xl ring-1 ring-border lg:h-[min(27rem,calc(100dvh-5.5rem))]">
         {/* Login stays on the left */}
         <div
           className={cn(
-            "bg-card/50 lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2",
+            "bg-card lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2",
             isRegister ? "hidden lg:block" : "block"
           )}
           aria-hidden={isRegister}
@@ -37,7 +37,7 @@ export function AuthPair() {
         {/* Signup stays on the right */}
         <div
           className={cn(
-            "bg-card/50 lg:absolute lg:inset-y-0 lg:left-1/2 lg:w-1/2",
+            "bg-card lg:absolute lg:inset-y-0 lg:left-1/2 lg:w-1/2",
             isRegister ? "block" : "hidden lg:block"
           )}
           aria-hidden={!isRegister}
@@ -118,9 +118,11 @@ function LoginPanel() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (isAuthenticated) {
-    router.replace("/home");
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/home");
+    }
+  }, [isAuthenticated, router]);
 
   return (
     <AuthForm
@@ -352,7 +354,7 @@ export function AuthForm({
         <Button
           type="submit"
           disabled={busy}
-          className="h-9 w-40 rounded-full bg-gradient-to-r from-primary to-accent text-sm font-medium uppercase tracking-wider text-primary-foreground shadow-md hover:opacity-90"
+          className="h-10 min-w-40"
         >
           {busy && <Loader2 className="size-4 animate-spin" />}
           {busy ? "Please wait…" : submitLabel}
@@ -406,8 +408,8 @@ export function AuthShell({
 }) {
   return (
     <AuthChrome>
-      <div className="relative w-full max-w-3xl overflow-hidden shadow-2xl ring-1 ring-foreground/10 lg:h-[min(27rem,calc(100dvh-5.5rem))]">
-        <div className="bg-card/50 lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2">
+      <div className="relative w-full max-w-3xl overflow-hidden shadow-2xl lg:h-[min(27rem,calc(100dvh-5.5rem))]">
+        <div className="bg-card lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2">
           <AuthForm
             title={title}
             subtitle={subtitle}

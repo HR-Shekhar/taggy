@@ -12,7 +12,7 @@ import {
   listPodsBySkill,
   type MySkill,
 } from "@/lib/api";
-import { Empty, Loading, PageHeader } from "@/components/app-ui";
+import { Empty, PageHeader, PageSkeleton } from "@/components/app-ui";
 import { toastApiError } from "@/lib/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -108,7 +108,7 @@ function PodsInner() {
     })();
   }, [skillSlug]);
 
-  if (loading) return <Loading />;
+  if (loading) return <PageSkeleton variant="list" />;
 
   const membershipForSkill = mine.find((p) => p.skill_slug === skillSlug);
   const alreadyInPodForSkill = Boolean(membershipForSkill);
@@ -119,7 +119,7 @@ function PodsInner() {
         title="Pods"
         description="Small accountability groups for the skill you're learning."
       />
-      <Card className="rounded-xl ring-1 ring-foreground/10">
+      <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">My memberships</CardTitle>
         </CardHeader>
@@ -170,7 +170,7 @@ function PodsInner() {
       </Card>
 
       {alreadyInPodForSkill ? (
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader>
             <CardTitle className="font-serif text-lg">Your pod for this skill</CardTitle>
             <CardDescription>
@@ -206,7 +206,7 @@ function PodsInner() {
         </Card>
       ) : (
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader>
             <CardTitle className="font-serif text-lg">Browse by skill</CardTitle>
             <CardDescription>Find open pods for an enrolled skill.</CardDescription>
@@ -261,7 +261,7 @@ function PodsInner() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader>
             <CardTitle className="font-serif text-lg">Create pod</CardTitle>
             <CardDescription>Start a small group (max 7).</CardDescription>
@@ -352,7 +352,7 @@ function PodsInner() {
 
 export default function PodsPage() {
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense fallback={<PageSkeleton variant="list" />}>
       <PodsInner />
     </Suspense>
   );

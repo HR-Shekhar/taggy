@@ -74,7 +74,7 @@ export default function ReportsPage() {
           {items.map((r) => (
             <Card
               key={r.id}
-              className="rounded-xl ring-1 ring-foreground/10"
+             
             >
               <CardHeader className="pb-2">
                 <div className="flex flex-wrap items-center gap-2">

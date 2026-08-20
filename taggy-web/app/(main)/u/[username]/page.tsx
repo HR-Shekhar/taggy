@@ -15,7 +15,7 @@ import {
 import {
   Empty,
   ErrorBox,
-  Loading,
+  PageSkeleton,
 } from "@/components/app-ui";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { UserAvatar } from "@/components/user-avatar";
@@ -89,7 +89,7 @@ export default function ProfilePage() {
     void load();
   }, [routeUser]);
 
-  if (loading) return <Loading />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!profile) return <ErrorBox message={loadError ?? "Profile not found"} />;
 
   const picture =
@@ -123,7 +123,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Card className="gap-0 overflow-hidden rounded-2xl p-0 ring-1 ring-foreground/10">
+      <Card className="gap-0 overflow-hidden rounded-2xl p-0">
         <div className="relative h-32 w-full sm:h-40">
           <Image
             src="/images/banner.jpg"
@@ -220,7 +220,7 @@ export default function ProfilePage() {
       </Card>
 
       {isSelf ? (
-        <Card className="rounded-2xl ring-1 ring-foreground/10">
+        <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle className="font-serif text-lg">Edit profile</CardTitle>
             <CardDescription>
@@ -297,7 +297,7 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="rounded-2xl ring-1 ring-foreground/10">
+        <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle className="font-serif text-lg">Report user</CardTitle>
           </CardHeader>

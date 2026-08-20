@@ -66,7 +66,7 @@ SET status = 'CANCELLED',
     updated_at = NOW()
 WHERE public_id = $1
   AND requester_id = $2
-  AND status = 'PENDING'
+  AND status IN ('PENDING', 'GENERATING')
 RETURNING id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
 `
 
@@ -98,6 +98,44 @@ func (q *Queries) CancelSkillCreationRequest(ctx context.Context, arg CancelSkil
 	return i, err
 }
 
+const completeSkillCreationDraft = `-- name: CompleteSkillCreationDraft :one
+UPDATE skill_creation_request
+SET draft_milestones = $2,
+    status = 'PENDING',
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
+`
+
+type CompleteSkillCreationDraftParams struct {
+	ID              int64
+	DraftMilestones []byte
+}
+
+func (q *Queries) CompleteSkillCreationDraft(ctx context.Context, arg CompleteSkillCreationDraftParams) (SkillCreationRequest, error) {
+	row := q.db.QueryRow(ctx, completeSkillCreationDraft, arg.ID, arg.DraftMilestones)
+	var i SkillCreationRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.RequesterID,
+		&i.Name,
+		&i.SlugCandidate,
+		&i.Description,
+		&i.Status,
+		&i.SimilarSkills,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedSkillID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createSkillCreationRequest = `-- name: CreateSkillCreationRequest :one
 INSERT INTO skill_creation_request (
     requester_id,
@@ -108,7 +146,7 @@ INSERT INTO skill_creation_request (
     similar_skills,
     draft_milestones
 )
-VALUES ($1, $2, $3, $4, 'PENDING', $5, $6)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
 `
 
@@ -117,6 +155,7 @@ type CreateSkillCreationRequestParams struct {
 	Name            string
 	SlugCandidate   string
 	Description     pgtype.Text
+	Status          CatalogRequestStatus
 	SimilarSkills   []byte
 	DraftMilestones []byte
 }
@@ -127,9 +166,48 @@ func (q *Queries) CreateSkillCreationRequest(ctx context.Context, arg CreateSkil
 		arg.Name,
 		arg.SlugCandidate,
 		arg.Description,
+		arg.Status,
 		arg.SimilarSkills,
 		arg.DraftMilestones,
 	)
+	var i SkillCreationRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.RequesterID,
+		&i.Name,
+		&i.SlugCandidate,
+		&i.Description,
+		&i.Status,
+		&i.SimilarSkills,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedSkillID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const failSkillCreationRequest = `-- name: FailSkillCreationRequest :one
+UPDATE skill_creation_request
+SET status = 'FAILED',
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
+`
+
+type FailSkillCreationRequestParams struct {
+	ID        int64
+	AdminNote pgtype.Text
+}
+
+func (q *Queries) FailSkillCreationRequest(ctx context.Context, arg FailSkillCreationRequestParams) (SkillCreationRequest, error) {
+	row := q.db.QueryRow(ctx, failSkillCreationRequest, arg.ID, arg.AdminNote)
 	var i SkillCreationRequest
 	err := row.Scan(
 		&i.ID,
@@ -156,7 +234,7 @@ SELECT id, public_id, requester_id, name, slug_candidate, description, status, s
 FROM skill_creation_request
 WHERE requester_id = $1
   AND lower(name) = lower($2)
-  AND status = 'PENDING'
+  AND status IN ('PENDING', 'GENERATING')
 LIMIT 1
 `
 
@@ -167,6 +245,35 @@ type GetPendingSkillCreationByRequesterAndNameParams struct {
 
 func (q *Queries) GetPendingSkillCreationByRequesterAndName(ctx context.Context, arg GetPendingSkillCreationByRequesterAndNameParams) (SkillCreationRequest, error) {
 	row := q.db.QueryRow(ctx, getPendingSkillCreationByRequesterAndName, arg.RequesterID, arg.Lower)
+	var i SkillCreationRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.RequesterID,
+		&i.Name,
+		&i.SlugCandidate,
+		&i.Description,
+		&i.Status,
+		&i.SimilarSkills,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedSkillID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSkillCreationRequestByID = `-- name: GetSkillCreationRequestByID :one
+SELECT id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
+FROM skill_creation_request
+WHERE id = $1
+`
+
+func (q *Queries) GetSkillCreationRequestByID(ctx context.Context, id int64) (SkillCreationRequest, error) {
+	row := q.db.QueryRow(ctx, getSkillCreationRequestByID, id)
 	var i SkillCreationRequest
 	err := row.Scan(
 		&i.ID,
@@ -215,6 +322,33 @@ func (q *Queries) GetSkillCreationRequestByPublicID(ctx context.Context, publicI
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listGeneratingSkillCreationRequests = `-- name: ListGeneratingSkillCreationRequests :many
+SELECT id
+FROM skill_creation_request
+WHERE status = 'GENERATING'
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListGeneratingSkillCreationRequests(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listGeneratingSkillCreationRequests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPendingSkillCreationRequests = `-- name: ListPendingSkillCreationRequests :many

@@ -15,15 +15,21 @@ export function SiteHeader() {
         </span>
         Taggy
       </Link>
-      <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border/70 bg-background/80 p-1 shadow-sm backdrop-blur-md">
-        <ThemeToggle />
+      <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border/60 bg-background/55 p-1.5 shadow-sm backdrop-blur-md">
+        <ThemeToggle className="shrink-0" />
         <Link
           href="/login"
-          className={cn(buttonVariants({ variant: "ghost" }), "rounded-full")}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "rounded-full"
+          )}
         >
           Log in
         </Link>
-        <Link href="/register" className={cn(buttonVariants(), "rounded-full")}>
+        <Link
+          href="/register"
+          className={cn(buttonVariants({ size: "sm" }), "rounded-full")}
+        >
           Get started
         </Link>
       </div>

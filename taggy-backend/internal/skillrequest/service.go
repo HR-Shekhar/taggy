@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HR-Shekhar/taggy-backend/internal/aigen"
 	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/openrouter"
 	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/postgres/sqlc"
 	apperrors "github.com/HR-Shekhar/taggy-backend/internal/shared/errors"
@@ -32,17 +33,24 @@ type Generator interface {
 type Notifier interface {
 	NotifySkillRequestApproved(ctx context.Context, userID, skillID int64, skillSlug string)
 	NotifySkillRequestRejected(ctx context.Context, userID int64, skillName, note string)
+	NotifySkillRequestReady(ctx context.Context, userID int64, skillName string)
+	NotifySkillRequestFailed(ctx context.Context, userID int64, skillName, note string)
+}
+
+type JobPool interface {
+	Submit(job aigen.Job) error
 }
 
 type Service struct {
 	repo      *Repository
 	generator Generator
 	notifier  Notifier
+	pool      JobPool
 	log       zerolog.Logger
 }
 
-func NewService(repo *Repository, generator Generator, notifier Notifier, log zerolog.Logger) *Service {
-	return &Service{repo: repo, generator: generator, notifier: notifier, log: log}
+func NewService(repo *Repository, generator Generator, notifier Notifier, pool JobPool, log zerolog.Logger) *Service {
+	return &Service{repo: repo, generator: generator, notifier: notifier, pool: pool, log: log}
 }
 
 func (s *Service) GetUserPublicIDByUsername(ctx context.Context, username string) (uuid.UUID, error) {
@@ -117,43 +125,116 @@ func (s *Service) Create(ctx context.Context, userPublicID uuid.UUID, input Crea
 	if s.generator == nil || !s.generator.Available() {
 		return CreateResult{}, logging.Reject(s.log, ErrAIUnavailable, "create skill request rejected: ai unavailable")
 	}
-
-	drafts, err := s.generator.GenerateRoadmap(ctx, name, desc, "")
-	if err != nil {
-		s.log.Warn().Err(err).Str("name", name).Msg("skill request ai generation failed")
-		wrapped := ErrAIFailed
-		errMsg := strings.ToLower(err.Error())
-		switch {
-		case strings.Contains(errMsg, "402") || strings.Contains(errMsg, "payment"):
-			wrapped = fmt.Errorf("%w: AI provider needs credits/payment", ErrAIFailed)
-		case strings.Contains(errMsg, "429") || strings.Contains(errMsg, "rate"):
-			wrapped = fmt.Errorf("%w: AI provider rate limited (429) — wait a minute and retry", ErrAIFailed)
-		}
-		return CreateResult{}, logging.Reject(s.log, wrapped, "create skill request rejected: ai failed")
+	if s.pool == nil {
+		return CreateResult{}, logging.Reject(s.log, ErrAIUnavailable, "create skill request rejected: ai pool unavailable")
 	}
 
 	similarJSON, _ := json.Marshal(similar)
-	draftJSON, _ := json.Marshal(drafts)
 	created, err := s.repo.CreateRequest(ctx, sqlc.CreateSkillCreationRequestParams{
 		RequesterID:     user.ID,
 		Name:            name,
 		SlugCandidate:   slug,
 		Description:     pgtype.Text{String: desc, Valid: desc != ""},
+		Status:          sqlc.CatalogRequestStatusGENERATING,
 		SimilarSkills:   similarJSON,
-		DraftMilestones: draftJSON,
+		DraftMilestones: []byte("[]"),
 	})
 	if err != nil {
 		return CreateResult{}, logging.Unexpected(s.log, err, "create skill request insert failed")
+	}
+
+	if err := s.enqueue(created.ID); err != nil {
+		note := "AI queue is full; please retry"
+		if _, ferr := s.repo.FailGenerating(ctx, created.ID, note); ferr != nil {
+			s.log.Error().Err(ferr).Int64("request_id", created.ID).Msg("fail skill request after queue full failed")
+		}
+		return CreateResult{}, logging.Reject(s.log, ErrAIBusy, "create skill request rejected: ai queue full")
 	}
 
 	s.log.Info().
 		Str("request_id", created.PublicID.String()).
 		Str("user", user.Username).
 		Str("name", name).
-		Int("milestones", len(drafts)).
-		Msg("skill creation request created")
+		Msg("skill creation request accepted for async generation")
 
 	return CreateResult{Request: toView(created)}, nil
+}
+
+// RequeueGenerating re-enqueues rows left in GENERATING after a process restart.
+func (s *Service) RequeueGenerating(ctx context.Context) {
+	if s.pool == nil || s.generator == nil || !s.generator.Available() {
+		return
+	}
+	ids, err := s.repo.ListGeneratingIDs(ctx)
+	if err != nil {
+		s.log.Error().Err(err).Msg("list generating skill requests failed")
+		return
+	}
+	for _, id := range ids {
+		if err := s.enqueue(id); err != nil {
+			s.log.Warn().Err(err).Int64("id", id).Msg("requeue skill request failed")
+		}
+	}
+	if len(ids) > 0 {
+		s.log.Info().Int("count", len(ids)).Msg("requeued generating skill requests")
+	}
+}
+
+func (s *Service) enqueue(id int64) error {
+	return s.pool.Submit(func(ctx context.Context) {
+		s.generateDraft(ctx, id)
+	})
+}
+
+func (s *Service) generateDraft(ctx context.Context, id int64) {
+	req, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			s.log.Error().Err(err).Int64("id", id).Msg("skill request generate: get failed")
+		}
+		return
+	}
+	if req.Status != sqlc.CatalogRequestStatusGENERATING {
+		return
+	}
+
+	desc := ""
+	if req.Description.Valid {
+		desc = req.Description.String
+	}
+	drafts, err := s.generator.GenerateRoadmap(ctx, req.Name, desc, "")
+	if err != nil {
+		s.log.Warn().Err(err).Int64("id", id).Str("name", req.Name).Msg("skill request ai generation failed")
+		note := "AI generation failed; please submit again"
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			note = "AI generation timed out; please submit again"
+		}
+		if _, ferr := s.repo.FailGenerating(context.WithoutCancel(ctx), id, note); ferr != nil && !errors.Is(ferr, pgx.ErrNoRows) {
+			s.log.Error().Err(ferr).Int64("id", id).Msg("mark skill request failed")
+		}
+		if s.notifier != nil {
+			s.notifier.NotifySkillRequestFailed(context.WithoutCancel(ctx), req.RequesterID, req.Name, note)
+		}
+		return
+	}
+
+	draftJSON, _ := json.Marshal(drafts)
+	updated, err := s.repo.CompleteDraft(ctx, id, draftJSON)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return
+		}
+		s.log.Error().Err(err).Int64("id", id).Msg("complete skill request draft failed")
+		return
+	}
+
+	if s.notifier != nil {
+		s.notifier.NotifySkillRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.Name)
+	}
+	s.log.Info().
+		Str("request_id", updated.PublicID.String()).
+		Int("milestones", len(drafts)).
+		Msg("skill creation draft ready for admin review")
 }
 
 func (s *Service) ListMine(ctx context.Context, userPublicID uuid.UUID) ([]RequestView, error) {
@@ -186,7 +267,7 @@ func (s *Service) Cancel(ctx context.Context, userPublicID uuid.UUID, requestPub
 	row, err := s.repo.Cancel(ctx, requestPublicID, user.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return RequestView{}, logging.Reject(s.log, ErrRequestNotFound, "cancel skill request rejected: not found or not pending")
+			return RequestView{}, logging.Reject(s.log, ErrRequestNotFound, "cancel skill request rejected: not found or not cancellable")
 		}
 		return RequestView{}, logging.Unexpected(s.log, err, "cancel skill request failed")
 	}

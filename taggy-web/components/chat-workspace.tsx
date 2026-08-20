@@ -73,11 +73,11 @@ export function ChatWorkspace({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card/40 backdrop-blur-sm",
+        "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background",
         className
       )}
     >
-      <header className="flex shrink-0 items-center gap-3 border-b border-border/70 bg-background/50 px-4 py-3 backdrop-blur-md">
+      <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {left ? (
             <Button
@@ -119,7 +119,7 @@ export function ChatWorkspace({
         {left ? (
           <aside
             className={cn(
-              "hidden shrink-0 flex-col overflow-hidden border-r border-border/70 bg-background/30 transition-[width] duration-300 ease-out md:flex",
+              "hidden shrink-0 flex-col overflow-hidden border-r border-border bg-card transition-[width] duration-300 ease-out md:flex",
               leftOpen ? "w-56 lg:w-60" : "w-11"
             )}
           >
@@ -157,7 +157,7 @@ export function ChatWorkspace({
           />
 
           <form
-            className="shrink-0 border-t border-border/70 bg-background/50 p-3 backdrop-blur-md"
+            className="shrink-0 border-t border-border bg-card p-3"
             onSubmit={async (e: FormEvent) => {
               e.preventDefault();
               if (composerDisabled) return;
@@ -215,7 +215,7 @@ export function ChatWorkspace({
 
         <aside
           className={cn(
-            "hidden shrink-0 flex-col overflow-hidden border-l border-border/70 bg-background/30 transition-[width] duration-300 ease-out lg:flex",
+            "hidden shrink-0 flex-col overflow-hidden border-l border-border bg-card transition-[width] duration-300 ease-out lg:flex",
             rightOpen ? "w-64 xl:w-72" : "w-11"
           )}
         >
@@ -241,7 +241,7 @@ export function ChatWorkspace({
       </div>
 
       {/* Mobile / tablet audio strip */}
-      <div className="max-h-52 shrink-0 overflow-y-auto border-t border-border/70 bg-background/50 lg:hidden">
+      <div className="max-h-52 shrink-0 overflow-y-auto border-t border-border bg-card lg:hidden">
         {audio}
       </div>
     </div>

@@ -2,38 +2,24 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { PageHeader } from "@/components/app-ui";
+import { PageHeader, Section } from "@/components/app-ui";
+import { ThemeModeSwitch } from "@/components/theme-mode-switch";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const { username } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-2xl space-y-8">
       <PageHeader
         title="Settings"
-        description="Account shortcuts for your Taggy profile."
+        description="Account, appearance, and shortcuts."
       />
-      <Card className="rounded-xl ring-1 ring-foreground/10">
-        <CardHeader>
-          <CardTitle className="font-serif text-lg">Account</CardTitle>
-          <CardDescription>
-            Signed in as <span className="font-medium">@{username}</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Link
-            href={`/u/${username}`}
-            className={cn(buttonVariants())}
-          >
+
+      <Section title="Account" description={`Signed in as @${username}`}>
+        <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-4">
+          <Link href={`/u/${username}`} className={cn(buttonVariants())}>
             Edit profile
           </Link>
           <Link
@@ -49,13 +35,33 @@ export default function SettingsPage() {
             My reports
           </Link>
           <Link
+            href="/notifications"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Notifications
+          </Link>
+        </div>
+      </Section>
+
+      <Section
+        title="Appearance"
+        description="Switch between light and dark mode."
+      >
+        <div className="rounded-xl border border-border bg-card p-4">
+          <ThemeModeSwitch />
+        </div>
+      </Section>
+
+      <Section title="Developer" description="Tools for API exploration.">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <Link
             href="/dev"
             className={cn(buttonVariants({ variant: "outline" }))}
           >
             API tester
           </Link>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
     </div>
   );
 }

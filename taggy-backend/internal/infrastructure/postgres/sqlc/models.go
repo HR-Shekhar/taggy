@@ -145,10 +145,12 @@ func (ns NullAudioRoomType) Value() (driver.Value, error) {
 type CatalogRequestStatus string
 
 const (
-	CatalogRequestStatusPENDING   CatalogRequestStatus = "PENDING"
-	CatalogRequestStatusAPPROVED  CatalogRequestStatus = "APPROVED"
-	CatalogRequestStatusREJECTED  CatalogRequestStatus = "REJECTED"
-	CatalogRequestStatusCANCELLED CatalogRequestStatus = "CANCELLED"
+	CatalogRequestStatusPENDING    CatalogRequestStatus = "PENDING"
+	CatalogRequestStatusAPPROVED   CatalogRequestStatus = "APPROVED"
+	CatalogRequestStatusREJECTED   CatalogRequestStatus = "REJECTED"
+	CatalogRequestStatusCANCELLED  CatalogRequestStatus = "CANCELLED"
+	CatalogRequestStatusGENERATING CatalogRequestStatus = "GENERATING"
+	CatalogRequestStatusFAILED     CatalogRequestStatus = "FAILED"
 )
 
 func (e *CatalogRequestStatus) Scan(src interface{}) error {
@@ -337,6 +339,12 @@ const (
 	NotificationTypeSKILLREQUESTREJECTED   NotificationType = "SKILL_REQUEST_REJECTED"
 	NotificationTypeROADMAPREQUESTAPPROVED NotificationType = "ROADMAP_REQUEST_APPROVED"
 	NotificationTypeROADMAPREQUESTREJECTED NotificationType = "ROADMAP_REQUEST_REJECTED"
+	NotificationTypeSKILLREQUESTREADY      NotificationType = "SKILL_REQUEST_READY"
+	NotificationTypeSKILLREQUESTFAILED     NotificationType = "SKILL_REQUEST_FAILED"
+	NotificationTypeROADMAPREQUESTREADY    NotificationType = "ROADMAP_REQUEST_READY"
+	NotificationTypeROADMAPREQUESTFAILED   NotificationType = "ROADMAP_REQUEST_FAILED"
+	NotificationTypeQUIZREADY              NotificationType = "QUIZ_READY"
+	NotificationTypeQUIZFAILED             NotificationType = "QUIZ_FAILED"
 )
 
 func (e *NotificationType) Scan(src interface{}) error {
@@ -466,6 +474,8 @@ const (
 	PodQuizStatusINPROGRESS PodQuizStatus = "IN_PROGRESS"
 	PodQuizStatusCOMPLETED  PodQuizStatus = "COMPLETED"
 	PodQuizStatusABANDONED  PodQuizStatus = "ABANDONED"
+	PodQuizStatusGENERATING PodQuizStatus = "GENERATING"
+	PodQuizStatusFAILED     PodQuizStatus = "FAILED"
 )
 
 func (e *PodQuizStatus) Scan(src interface{}) error {

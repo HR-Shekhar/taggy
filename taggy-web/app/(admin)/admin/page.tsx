@@ -152,7 +152,7 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-4">
             {skills.map((req) => (
-              <Card key={req.id} className="rounded-xl ring-1 ring-foreground/10">
+              <Card key={req.id}>
                 <CardHeader>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
@@ -221,7 +221,7 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-4">
             {edits.map((req) => (
-              <Card key={req.id} className="rounded-xl ring-1 ring-foreground/10">
+              <Card key={req.id}>
                 <CardHeader>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>

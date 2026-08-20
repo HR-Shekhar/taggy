@@ -5,9 +5,11 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/postgres/sqlc"
 	"github.com/HR-Shekhar/taggy-backend/internal/shared/logging"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rs/zerolog"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -38,53 +40,53 @@ func (s *Service) Search(ctx context.Context, input Input) (Result, error) {
 	}
 	limit := normalizeLimit(input.Limit)
 
-	var out Result
+	g, gctx := errgroup.WithContext(ctx)
+
+	var (
+		skills      []SkillHit
+		users       []UserHit
+		communities []CommunityHit
+	)
+
 	if types["skills"] {
-		rows, err := s.repo.SearchSkills(ctx, query, limit)
-		if err != nil {
-			return Result{}, logging.Unexpected(s.log, err, "search skills failed")
-		}
-		out.Skills = make([]SkillHit, 0, len(rows))
-		for _, row := range rows {
-			out.Skills = append(out.Skills, SkillHit{
-				ID:          row.ID,
-				Name:        row.Name,
-				Slug:        row.Slug,
-				Description: textPtr(row.Description),
-			})
-		}
+		g.Go(func() error {
+			rows, err := s.repo.SearchSkills(gctx, query, limit)
+			if err != nil {
+				return logging.Unexpected(s.log, err, "search skills failed")
+			}
+			skills = mapSkillHits(rows)
+			return nil
+		})
 	}
 	if types["users"] {
-		rows, err := s.repo.SearchUsers(ctx, query, limit)
-		if err != nil {
-			return Result{}, logging.Unexpected(s.log, err, "search users failed")
-		}
-		out.Users = make([]UserHit, 0, len(rows))
-		for _, row := range rows {
-			out.Users = append(out.Users, UserHit{
-				PublicID:          row.PublicID.String(),
-				Username:          row.Username,
-				Name:              row.Name,
-				ProfilePictureURL: textPtr(row.ProfilePictureUrl),
-				Bio:               textPtr(row.Bio),
-			})
-		}
+		g.Go(func() error {
+			rows, err := s.repo.SearchUsers(gctx, query, limit)
+			if err != nil {
+				return logging.Unexpected(s.log, err, "search users failed")
+			}
+			users = mapUserHits(rows)
+			return nil
+		})
 	}
 	if types["communities"] {
-		rows, err := s.repo.SearchCommunities(ctx, query, limit)
-		if err != nil {
-			return Result{}, logging.Unexpected(s.log, err, "search communities failed")
-		}
-		out.Communities = make([]CommunityHit, 0, len(rows))
-		for _, row := range rows {
-			out.Communities = append(out.Communities, CommunityHit{
-				ID:          row.ID,
-				Name:        row.Name,
-				Description: textPtr(row.Description),
-				SkillSlug:   row.SkillSlug,
-				SkillName:   row.SkillName,
-			})
-		}
+		g.Go(func() error {
+			rows, err := s.repo.SearchCommunities(gctx, query, limit)
+			if err != nil {
+				return logging.Unexpected(s.log, err, "search communities failed")
+			}
+			communities = mapCommunityHits(rows)
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return Result{}, err
+	}
+
+	out := Result{
+		Skills:      skills,
+		Users:       users,
+		Communities: communities,
 	}
 
 	s.log.Info().
@@ -95,6 +97,47 @@ func (s *Service) Search(ctx context.Context, input Input) (Result, error) {
 		Msg("search completed")
 
 	return out, nil
+}
+
+func mapSkillHits(rows []sqlc.Skill) []SkillHit {
+	out := make([]SkillHit, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, SkillHit{
+			ID:          row.ID,
+			Name:        row.Name,
+			Slug:        row.Slug,
+			Description: textPtr(row.Description),
+		})
+	}
+	return out
+}
+
+func mapUserHits(rows []sqlc.SearchUsersRow) []UserHit {
+	out := make([]UserHit, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, UserHit{
+			PublicID:          row.PublicID.String(),
+			Username:          row.Username,
+			Name:              row.Name,
+			ProfilePictureURL: textPtr(row.ProfilePictureUrl),
+			Bio:               textPtr(row.Bio),
+		})
+	}
+	return out
+}
+
+func mapCommunityHits(rows []sqlc.SearchCommunitiesRow) []CommunityHit {
+	out := make([]CommunityHit, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, CommunityHit{
+			ID:          row.ID,
+			Name:        row.Name,
+			Description: textPtr(row.Description),
+			SkillSlug:   row.SkillSlug,
+			SkillName:   row.SkillName,
+		})
+	}
+	return out
 }
 
 func sanitizeQuery(raw string) string {

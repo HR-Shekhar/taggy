@@ -183,7 +183,7 @@ function ResultCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="rounded-xl ring-1 ring-foreground/10">
+    <Card>
       <CardHeader>
         <CardTitle className="font-serif text-lg">{title}</CardTitle>
       </CardHeader>

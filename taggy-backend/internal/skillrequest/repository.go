@@ -61,8 +61,30 @@ func (r *Repository) CreateRequest(ctx context.Context, arg sqlc.CreateSkillCrea
 	return r.queries.CreateSkillCreationRequest(ctx, arg)
 }
 
+func (r *Repository) GetByID(ctx context.Context, id int64) (sqlc.SkillCreationRequest, error) {
+	return r.queries.GetSkillCreationRequestByID(ctx, id)
+}
+
 func (r *Repository) GetByPublicID(ctx context.Context, id uuid.UUID) (sqlc.SkillCreationRequest, error) {
 	return r.queries.GetSkillCreationRequestByPublicID(ctx, id)
+}
+
+func (r *Repository) ListGeneratingIDs(ctx context.Context) ([]int64, error) {
+	return r.queries.ListGeneratingSkillCreationRequests(ctx)
+}
+
+func (r *Repository) CompleteDraft(ctx context.Context, id int64, draftJSON []byte) (sqlc.SkillCreationRequest, error) {
+	return r.queries.CompleteSkillCreationDraft(ctx, sqlc.CompleteSkillCreationDraftParams{
+		ID:              id,
+		DraftMilestones: draftJSON,
+	})
+}
+
+func (r *Repository) FailGenerating(ctx context.Context, id int64, note string) (sqlc.SkillCreationRequest, error) {
+	return r.queries.FailSkillCreationRequest(ctx, sqlc.FailSkillCreationRequestParams{
+		ID:        id,
+		AdminNote: pgtype.Text{String: note, Valid: note != ""},
+	})
 }
 
 func (r *Repository) ListByRequester(ctx context.Context, requesterID int64, limit int32) ([]sqlc.SkillCreationRequest, error) {

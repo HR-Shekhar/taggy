@@ -7,7 +7,7 @@ INSERT INTO pod_quiz (
     topic_count,
     completed_topic_titles
 ) VALUES (
-    $1, $2, $3, 'IN_PROGRESS', $4, $5
+    $1, $2, $3, $4, $5, $6
 )
 RETURNING *;
 
@@ -15,11 +15,35 @@ RETURNING *;
 SELECT * FROM pod_quiz
 WHERE public_id = $1;
 
+-- name: GetPodQuizByID :one
+SELECT * FROM pod_quiz
+WHERE id = $1;
+
 -- name: GetInProgressPodQuiz :one
 SELECT * FROM pod_quiz
 WHERE user_id = $1
   AND pod_id = $2
-  AND status = 'IN_PROGRESS';
+  AND status IN ('IN_PROGRESS', 'GENERATING');
+
+-- name: ListGeneratingPodQuizzes :many
+SELECT id
+FROM pod_quiz
+WHERE status = 'GENERATING'
+ORDER BY created_at ASC;
+
+-- name: ActivatePodQuiz :one
+UPDATE pod_quiz
+SET status = 'IN_PROGRESS'
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING *;
+
+-- name: FailPodQuiz :one
+UPDATE pod_quiz
+SET status = 'FAILED'
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING *;
 
 -- name: ListMyPodQuizzes :many
 SELECT * FROM pod_quiz
@@ -43,7 +67,7 @@ RETURNING *;
 UPDATE pod_quiz
 SET status = 'ABANDONED'
 WHERE id = $1
-  AND status = 'IN_PROGRESS'
+  AND status IN ('IN_PROGRESS', 'GENERATING')
 RETURNING *;
 
 -- name: CreatePodQuizQuestion :one

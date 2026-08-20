@@ -65,8 +65,30 @@ func (r *Repository) Create(ctx context.Context, arg sqlc.CreateRoadmapEditReque
 	return r.queries.CreateRoadmapEditRequest(ctx, arg)
 }
 
+func (r *Repository) GetByID(ctx context.Context, id int64) (sqlc.GetRoadmapEditRequestByIDRow, error) {
+	return r.queries.GetRoadmapEditRequestByID(ctx, id)
+}
+
 func (r *Repository) GetByPublicID(ctx context.Context, id uuid.UUID) (sqlc.GetRoadmapEditRequestByPublicIDRow, error) {
 	return r.queries.GetRoadmapEditRequestByPublicID(ctx, id)
+}
+
+func (r *Repository) ListGeneratingIDs(ctx context.Context) ([]int64, error) {
+	return r.queries.ListGeneratingRoadmapEditRequests(ctx)
+}
+
+func (r *Repository) CompleteDraft(ctx context.Context, id int64, draftJSON []byte) (sqlc.RoadmapEditRequest, error) {
+	return r.queries.CompleteRoadmapEditDraft(ctx, sqlc.CompleteRoadmapEditDraftParams{
+		ID:              id,
+		DraftMilestones: draftJSON,
+	})
+}
+
+func (r *Repository) FailGenerating(ctx context.Context, id int64, note string) (sqlc.RoadmapEditRequest, error) {
+	return r.queries.FailRoadmapEditRequest(ctx, sqlc.FailRoadmapEditRequestParams{
+		ID:        id,
+		AdminNote: pgtype.Text{String: note, Valid: note != ""},
+	})
 }
 
 func (r *Repository) ListByRequester(ctx context.Context, requesterID int64, limit int32) ([]sqlc.ListRoadmapEditRequestsByRequesterRow, error) {

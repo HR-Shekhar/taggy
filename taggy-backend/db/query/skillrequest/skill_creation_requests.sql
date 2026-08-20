@@ -8,7 +8,7 @@ INSERT INTO skill_creation_request (
     similar_skills,
     draft_milestones
 )
-VALUES ($1, $2, $3, $4, 'PENDING', $5, $6)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 
@@ -16,6 +16,12 @@ RETURNING *;
 SELECT *
 FROM skill_creation_request
 WHERE public_id = $1;
+
+
+-- name: GetSkillCreationRequestByID :one
+SELECT *
+FROM skill_creation_request
+WHERE id = $1;
 
 
 -- name: ListSkillCreationRequestsByRequester :many
@@ -34,13 +40,40 @@ ORDER BY created_at ASC
 LIMIT sqlc.arg(result_limit);
 
 
+-- name: ListGeneratingSkillCreationRequests :many
+SELECT id
+FROM skill_creation_request
+WHERE status = 'GENERATING'
+ORDER BY created_at ASC;
+
+
+-- name: CompleteSkillCreationDraft :one
+UPDATE skill_creation_request
+SET draft_milestones = $2,
+    status = 'PENDING',
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING *;
+
+
+-- name: FailSkillCreationRequest :one
+UPDATE skill_creation_request
+SET status = 'FAILED',
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING *;
+
+
 -- name: CancelSkillCreationRequest :one
 UPDATE skill_creation_request
 SET status = 'CANCELLED',
     updated_at = NOW()
 WHERE public_id = $1
   AND requester_id = $2
-  AND status = 'PENDING'
+  AND status IN ('PENDING', 'GENERATING')
 RETURNING *;
 
 
@@ -74,5 +107,5 @@ SELECT *
 FROM skill_creation_request
 WHERE requester_id = $1
   AND lower(name) = lower($2)
-  AND status = 'PENDING'
+  AND status IN ('PENDING', 'GENERATING')
 LIMIT 1;

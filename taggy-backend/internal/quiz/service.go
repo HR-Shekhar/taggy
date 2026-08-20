@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/HR-Shekhar/taggy-backend/internal/aigen"
 	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/openrouter"
 	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/postgres/sqlc"
 	"github.com/HR-Shekhar/taggy-backend/internal/shared/logging"
@@ -21,14 +22,25 @@ type AIClient interface {
 	GenerateQuiz(ctx context.Context, topicTitles []string) ([]openrouter.QuizQuestionDraft, error)
 }
 
-type Service struct {
-	repo *Repository
-	ai   AIClient
-	log  zerolog.Logger
+type Notifier interface {
+	NotifyQuizReady(ctx context.Context, userID, podID int64, podSlug string)
+	NotifyQuizFailed(ctx context.Context, userID, podID int64, podSlug, note string)
 }
 
-func NewService(repo *Repository, ai AIClient, log zerolog.Logger) *Service {
-	return &Service{repo: repo, ai: ai, log: log}
+type JobPool interface {
+	Submit(job aigen.Job) error
+}
+
+type Service struct {
+	repo     *Repository
+	ai       AIClient
+	notifier Notifier
+	pool     JobPool
+	log      zerolog.Logger
+}
+
+func NewService(repo *Repository, ai AIClient, notifier Notifier, pool JobPool, log zerolog.Logger) *Service {
+	return &Service{repo: repo, ai: ai, notifier: notifier, pool: pool, log: log}
 }
 
 func (s *Service) StartQuiz(ctx context.Context, userPublicID uuid.UUID, podSlug string) (quizResponse, error) {
@@ -56,22 +68,99 @@ func (s *Service) StartQuiz(ctx context.Context, userPublicID uuid.UUID, podSlug
 	if s.ai == nil || !s.ai.Available() {
 		return quizResponse{}, logging.Reject(s.log, ErrAIUnavailable, "start quiz rejected: ai unavailable")
 	}
-
-	drafts, err := s.ai.GenerateQuiz(ctx, topics)
-	if err != nil {
-		s.log.Warn().Err(err).Msg("quiz generation failed")
-		return quizResponse{}, ErrAIFailed
+	if s.pool == nil {
+		return quizResponse{}, logging.Reject(s.log, ErrAIUnavailable, "start quiz rejected: ai pool unavailable")
 	}
 
 	quiz, err := s.repo.CreateQuiz(ctx, sqlc.CreatePodQuizParams{
 		PodID:                pod.ID,
 		UserID:               user.ID,
 		SkillID:              pod.SkillID,
+		Status:               sqlc.PodQuizStatusGENERATING,
 		TopicCount:           int32(len(topics)),
 		CompletedTopicTitles: mustJSON(topics),
 	})
 	if err != nil {
 		return quizResponse{}, logging.Unexpected(s.log, err, "create quiz failed")
+	}
+
+	if err := s.enqueue(quiz.ID, podSlug); err != nil {
+		if _, ferr := s.repo.FailGenerating(ctx, quiz.ID); ferr != nil {
+			s.log.Error().Err(ferr).Int64("quiz_id", quiz.ID).Msg("fail quiz after queue full failed")
+		}
+		return quizResponse{}, logging.Reject(s.log, ErrAIBusy, "start quiz rejected: ai queue full")
+	}
+
+	s.log.Info().
+		Str("quiz_id", quiz.PublicID.String()).
+		Str("pod", podSlug).
+		Msg("pod quiz accepted for async generation")
+
+	return s.buildQuizResponse(ctx, quiz, false)
+}
+
+// RequeueGenerating re-enqueues GENERATING quizzes after restart.
+func (s *Service) RequeueGenerating(ctx context.Context) {
+	if s.pool == nil || s.ai == nil || !s.ai.Available() {
+		return
+	}
+	ids, err := s.repo.ListGeneratingIDs(ctx)
+	if err != nil {
+		s.log.Error().Err(err).Msg("list generating quizzes failed")
+		return
+	}
+	for _, id := range ids {
+		quiz, err := s.repo.GetQuizByID(ctx, id)
+		if err != nil {
+			continue
+		}
+		podSlug := ""
+		if pod, err := s.repo.GetPodByID(ctx, quiz.PodID); err == nil {
+			podSlug = pod.Slug
+		}
+		if err := s.enqueue(id, podSlug); err != nil {
+			s.log.Warn().Err(err).Int64("id", id).Msg("requeue quiz failed")
+		}
+	}
+	if len(ids) > 0 {
+		s.log.Info().Int("count", len(ids)).Msg("requeued generating quizzes")
+	}
+}
+
+func (s *Service) enqueue(id int64, podSlug string) error {
+	return s.pool.Submit(func(ctx context.Context) {
+		s.generateQuiz(ctx, id, podSlug)
+	})
+}
+
+func (s *Service) generateQuiz(ctx context.Context, id int64, podSlug string) {
+	quiz, err := s.repo.GetQuizByID(ctx, id)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			s.log.Error().Err(err).Int64("id", id).Msg("quiz generate: get failed")
+		}
+		return
+	}
+	if quiz.Status != sqlc.PodQuizStatusGENERATING {
+		return
+	}
+
+	topics := decodeStringSlice(quiz.CompletedTopicTitles)
+	drafts, err := s.ai.GenerateQuiz(ctx, topics)
+	if err != nil {
+		s.log.Warn().Err(err).Int64("id", id).Msg("quiz generation failed")
+		bg := context.WithoutCancel(ctx)
+		if _, ferr := s.repo.FailGenerating(bg, id); ferr != nil && !errors.Is(ferr, pgx.ErrNoRows) {
+			s.log.Error().Err(ferr).Int64("id", id).Msg("mark quiz failed")
+		}
+		if s.notifier != nil {
+			note := "Quiz generation failed; please try again"
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+				note = "Quiz generation timed out; please try again"
+			}
+			s.notifier.NotifyQuizFailed(bg, quiz.UserID, quiz.PodID, podSlug, note)
+		}
+		return
 	}
 
 	for i, d := range drafts {
@@ -86,20 +175,42 @@ func (s *Service) StartQuiz(ctx context.Context, userPublicID uuid.UUID, podSlug
 			Weight:         1,
 		})
 		if err != nil {
-			return quizResponse{}, logging.Unexpected(s.log, err, "create quiz question failed")
+			s.log.Error().Err(err).Int64("id", id).Msg("create quiz question failed")
+			bg := context.WithoutCancel(ctx)
+			_, _ = s.repo.FailGenerating(bg, id)
+			if s.notifier != nil {
+				s.notifier.NotifyQuizFailed(bg, quiz.UserID, quiz.PodID, podSlug, "Quiz generation failed; please try again")
+			}
+			return
 		}
 	}
 
-	// Start timer on first question.
-	q1, err := s.repo.GetQuestionByOrder(ctx, quiz.ID, 1)
+	activated, err := s.repo.ActivateQuiz(ctx, id)
 	if err != nil {
-		return quizResponse{}, logging.Unexpected(s.log, err, "get q1 failed")
-	}
-	if _, err := s.repo.UpsertAnswerStart(ctx, quiz.ID, q1.ID); err != nil {
-		return quizResponse{}, logging.Unexpected(s.log, err, "start q1 timer failed")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return
+		}
+		s.log.Error().Err(err).Int64("id", id).Msg("activate quiz failed")
+		return
 	}
 
-	return s.buildQuizResponse(ctx, quiz, false)
+	q1, err := s.repo.GetQuestionByOrder(ctx, activated.ID, 1)
+	if err != nil {
+		s.log.Error().Err(err).Int64("id", id).Msg("get q1 after generate failed")
+		return
+	}
+	if _, err := s.repo.UpsertAnswerStart(ctx, activated.ID, q1.ID); err != nil {
+		s.log.Error().Err(err).Int64("id", id).Msg("start q1 timer after generate failed")
+		return
+	}
+
+	if s.notifier != nil {
+		s.notifier.NotifyQuizReady(context.WithoutCancel(ctx), activated.UserID, activated.PodID, podSlug)
+	}
+	s.log.Info().
+		Str("quiz_id", activated.PublicID.String()).
+		Str("pod", podSlug).
+		Msg("pod quiz ready")
 }
 
 func (s *Service) StartQuestion(ctx context.Context, userPublicID uuid.UUID, podSlug, quizPublicID string, order int32) (startResponse, error) {
@@ -365,6 +476,12 @@ func (s *Service) loadOwnedInProgress(ctx context.Context, userID, podID int64, 
 	}
 	if quiz.UserID != userID || quiz.PodID != podID {
 		return sqlc.PodQuiz{}, logging.Reject(s.log, ErrQuizNotOwned, "quiz not owned")
+	}
+	if quiz.Status == sqlc.PodQuizStatusGENERATING {
+		return sqlc.PodQuiz{}, logging.Reject(s.log, ErrQuizGenerating, "quiz still generating")
+	}
+	if quiz.Status == sqlc.PodQuizStatusFAILED {
+		return sqlc.PodQuiz{}, logging.Reject(s.log, ErrQuizFailed, "quiz generation failed")
 	}
 	if quiz.Status != sqlc.PodQuizStatusINPROGRESS {
 		return sqlc.PodQuiz{}, logging.Reject(s.log, ErrQuizNotInProgress, "quiz not in progress")

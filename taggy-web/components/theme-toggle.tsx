@@ -23,7 +23,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       disabled={!mounted}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
-        "inline-flex size-8 cursor-pointer items-center justify-center rounded-lg border border-foreground/20 bg-background/70 text-muted-foreground outline-none transition-[color,background-color,border-color,box-shadow] duration-200",
+        "inline-flex size-7 cursor-pointer items-center justify-center rounded-full border border-foreground/20 bg-background/70 text-muted-foreground outline-none transition-[color,background-color,border-color,box-shadow] duration-200",
         "hover:border-foreground/40 hover:bg-muted hover:text-foreground hover:shadow-sm",
         "focus-visible:ring-3 focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",

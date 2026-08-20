@@ -30,8 +30,8 @@ export default function LandingPage() {
       <SiteHeader />
       <main className="relative z-10 flex-1">
         <Hero />
-        <Features />
         <HowItWorks />
+        <Features />
         <CtaSection />
       </main>
       <div className="relative z-10">

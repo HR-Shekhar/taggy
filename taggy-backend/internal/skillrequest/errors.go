@@ -11,6 +11,7 @@ var (
 	ErrNotPending        = errors.New("request is not pending")
 	ErrAIUnavailable     = errors.New("roadmap generation is unavailable")
 	ErrAIFailed          = errors.New("roadmap generation failed")
+	ErrAIBusy            = errors.New("AI generation is busy; try again shortly")
 	ErrSlugTaken         = errors.New("skill slug is already taken")
 	ErrNotAdmin          = errors.New("admin access required")
 )

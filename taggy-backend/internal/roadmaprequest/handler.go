@@ -37,8 +37,8 @@ func (h *Handler) Create(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Info().Str("skill", skillSlug).Str("request_id", row.ID).Msg("roadmap edit request created")
-	return c.JSON(http.StatusCreated, row)
+	log.Info().Str("skill", skillSlug).Str("request_id", row.ID).Msg("roadmap edit request accepted for generation")
+	return c.JSON(http.StatusAccepted, row)
 }
 
 func (h *Handler) ListMine(c echo.Context) error {

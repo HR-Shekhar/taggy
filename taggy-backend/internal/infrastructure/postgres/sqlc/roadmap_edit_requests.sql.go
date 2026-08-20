@@ -65,7 +65,7 @@ SET status = 'CANCELLED',
     updated_at = NOW()
 WHERE public_id = $1
   AND requester_id = $2
-  AND status = 'PENDING'
+  AND status IN ('PENDING', 'GENERATING')
 RETURNING id, public_id, skill_id, requester_id, rationale, status, base_version_number, draft_milestones, admin_note, reviewed_by, reviewed_at, created_version_id, created_at, updated_at
 `
 
@@ -96,6 +96,43 @@ func (q *Queries) CancelRoadmapEditRequest(ctx context.Context, arg CancelRoadma
 	return i, err
 }
 
+const completeRoadmapEditDraft = `-- name: CompleteRoadmapEditDraft :one
+UPDATE roadmap_edit_request
+SET draft_milestones = $2,
+    status = 'PENDING',
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, skill_id, requester_id, rationale, status, base_version_number, draft_milestones, admin_note, reviewed_by, reviewed_at, created_version_id, created_at, updated_at
+`
+
+type CompleteRoadmapEditDraftParams struct {
+	ID              int64
+	DraftMilestones []byte
+}
+
+func (q *Queries) CompleteRoadmapEditDraft(ctx context.Context, arg CompleteRoadmapEditDraftParams) (RoadmapEditRequest, error) {
+	row := q.db.QueryRow(ctx, completeRoadmapEditDraft, arg.ID, arg.DraftMilestones)
+	var i RoadmapEditRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.SkillID,
+		&i.RequesterID,
+		&i.Rationale,
+		&i.Status,
+		&i.BaseVersionNumber,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedVersionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createRoadmapEditRequest = `-- name: CreateRoadmapEditRequest :one
 INSERT INTO roadmap_edit_request (
     skill_id,
@@ -105,7 +142,7 @@ INSERT INTO roadmap_edit_request (
     base_version_number,
     draft_milestones
 )
-VALUES ($1, $2, $3, 'PENDING', $4, $5)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, public_id, skill_id, requester_id, rationale, status, base_version_number, draft_milestones, admin_note, reviewed_by, reviewed_at, created_version_id, created_at, updated_at
 `
 
@@ -113,6 +150,7 @@ type CreateRoadmapEditRequestParams struct {
 	SkillID           int64
 	RequesterID       int64
 	Rationale         pgtype.Text
+	Status            CatalogRequestStatus
 	BaseVersionNumber int32
 	DraftMilestones   []byte
 }
@@ -122,9 +160,47 @@ func (q *Queries) CreateRoadmapEditRequest(ctx context.Context, arg CreateRoadma
 		arg.SkillID,
 		arg.RequesterID,
 		arg.Rationale,
+		arg.Status,
 		arg.BaseVersionNumber,
 		arg.DraftMilestones,
 	)
+	var i RoadmapEditRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.SkillID,
+		&i.RequesterID,
+		&i.Rationale,
+		&i.Status,
+		&i.BaseVersionNumber,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedVersionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const failRoadmapEditRequest = `-- name: FailRoadmapEditRequest :one
+UPDATE roadmap_edit_request
+SET status = 'FAILED',
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, skill_id, requester_id, rationale, status, base_version_number, draft_milestones, admin_note, reviewed_by, reviewed_at, created_version_id, created_at, updated_at
+`
+
+type FailRoadmapEditRequestParams struct {
+	ID        int64
+	AdminNote pgtype.Text
+}
+
+func (q *Queries) FailRoadmapEditRequest(ctx context.Context, arg FailRoadmapEditRequestParams) (RoadmapEditRequest, error) {
+	row := q.db.QueryRow(ctx, failRoadmapEditRequest, arg.ID, arg.AdminNote)
 	var i RoadmapEditRequest
 	err := row.Scan(
 		&i.ID,
@@ -150,7 +226,7 @@ SELECT id, public_id, skill_id, requester_id, rationale, status, base_version_nu
 FROM roadmap_edit_request
 WHERE requester_id = $1
   AND skill_id = $2
-  AND status = 'PENDING'
+  AND status IN ('PENDING', 'GENERATING')
 LIMIT 1
 `
 
@@ -177,6 +253,59 @@ func (q *Queries) GetPendingRoadmapEditByRequesterAndSkill(ctx context.Context, 
 		&i.CreatedVersionID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getRoadmapEditRequestByID = `-- name: GetRoadmapEditRequestByID :one
+SELECT
+    r.id, r.public_id, r.skill_id, r.requester_id, r.rationale, r.status, r.base_version_number, r.draft_milestones, r.admin_note, r.reviewed_by, r.reviewed_at, r.created_version_id, r.created_at, r.updated_at,
+    s.slug AS skill_slug,
+    s.name AS skill_name
+FROM roadmap_edit_request r
+INNER JOIN skills s ON s.id = r.skill_id
+WHERE r.id = $1
+`
+
+type GetRoadmapEditRequestByIDRow struct {
+	ID                int64
+	PublicID          uuid.UUID
+	SkillID           int64
+	RequesterID       int64
+	Rationale         pgtype.Text
+	Status            CatalogRequestStatus
+	BaseVersionNumber int32
+	DraftMilestones   []byte
+	AdminNote         pgtype.Text
+	ReviewedBy        pgtype.Int8
+	ReviewedAt        pgtype.Timestamptz
+	CreatedVersionID  pgtype.Int8
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+	SkillSlug         string
+	SkillName         string
+}
+
+func (q *Queries) GetRoadmapEditRequestByID(ctx context.Context, id int64) (GetRoadmapEditRequestByIDRow, error) {
+	row := q.db.QueryRow(ctx, getRoadmapEditRequestByID, id)
+	var i GetRoadmapEditRequestByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.SkillID,
+		&i.RequesterID,
+		&i.Rationale,
+		&i.Status,
+		&i.BaseVersionNumber,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedVersionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SkillSlug,
+		&i.SkillName,
 	)
 	return i, err
 }
@@ -232,6 +361,33 @@ func (q *Queries) GetRoadmapEditRequestByPublicID(ctx context.Context, publicID 
 		&i.SkillName,
 	)
 	return i, err
+}
+
+const listGeneratingRoadmapEditRequests = `-- name: ListGeneratingRoadmapEditRequests :many
+SELECT id
+FROM roadmap_edit_request
+WHERE status = 'GENERATING'
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListGeneratingRoadmapEditRequests(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listGeneratingRoadmapEditRequests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPendingRoadmapEditRequests = `-- name: ListPendingRoadmapEditRequests :many

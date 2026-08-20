@@ -316,6 +316,84 @@ func (s *Service) NotifyRoadmapRequestRejected(ctx context.Context, userID int64
 	})
 }
 
+func (s *Service) NotifySkillRequestReady(ctx context.Context, userID int64, skillName string) {
+	s.emit(ctx, CreateInput{
+		UserID: userID,
+		Type:   string(sqlc.NotificationTypeSKILLREQUESTREADY),
+		Title:  "Skill draft ready",
+		Body:   fmt.Sprintf("Your AI draft for \"%s\" is ready for admin review.", skillName),
+	})
+}
+
+func (s *Service) NotifySkillRequestFailed(ctx context.Context, userID int64, skillName, note string) {
+	body := fmt.Sprintf("AI drafting for \"%s\" failed.", skillName)
+	if strings.TrimSpace(note) != "" {
+		body += " " + strings.TrimSpace(note)
+	}
+	s.emit(ctx, CreateInput{
+		UserID: userID,
+		Type:   string(sqlc.NotificationTypeSKILLREQUESTFAILED),
+		Title:  "Skill draft failed",
+		Body:   body,
+	})
+}
+
+func (s *Service) NotifyRoadmapRequestReady(ctx context.Context, userID, skillID int64, skillSlug string) {
+	s.emit(ctx, CreateInput{
+		UserID:     userID,
+		Type:       string(sqlc.NotificationTypeROADMAPREQUESTREADY),
+		EntityType: strPtr("skill"),
+		EntityID:   &skillID,
+		Title:      "Roadmap draft ready",
+		Body:       fmt.Sprintf("Your AI draft update for %s is ready for admin review.", skillSlug),
+	})
+}
+
+func (s *Service) NotifyRoadmapRequestFailed(ctx context.Context, userID int64, skillSlug, note string) {
+	body := fmt.Sprintf("AI drafting for %s failed.", skillSlug)
+	if strings.TrimSpace(note) != "" {
+		body += " " + strings.TrimSpace(note)
+	}
+	s.emit(ctx, CreateInput{
+		UserID: userID,
+		Type:   string(sqlc.NotificationTypeROADMAPREQUESTFAILED),
+		Title:  "Roadmap draft failed",
+		Body:   body,
+	})
+}
+
+func (s *Service) NotifyQuizReady(ctx context.Context, userID, podID int64, podSlug string) {
+	body := "Your pod quiz is ready."
+	if strings.TrimSpace(podSlug) != "" {
+		body = fmt.Sprintf("Your quiz for %s is ready.", podSlug)
+	}
+	s.emit(ctx, CreateInput{
+		UserID:     userID,
+		Type:       string(sqlc.NotificationTypeQUIZREADY),
+		EntityType: strPtr("pod"),
+		EntityID:   &podID,
+		Title:      "Quiz ready",
+		Body:       body,
+	})
+}
+
+func (s *Service) NotifyQuizFailed(ctx context.Context, userID, podID int64, podSlug, note string) {
+	body := "Quiz generation failed; please try again."
+	if strings.TrimSpace(note) != "" {
+		body = strings.TrimSpace(note)
+	} else if strings.TrimSpace(podSlug) != "" {
+		body = fmt.Sprintf("Quiz generation for %s failed; please try again.", podSlug)
+	}
+	s.emit(ctx, CreateInput{
+		UserID:     userID,
+		Type:       string(sqlc.NotificationTypeQUIZFAILED),
+		EntityType: strPtr("pod"),
+		EntityID:   &podID,
+		Title:      "Quiz generation failed",
+		Body:       body,
+	})
+}
+
 func (s *Service) emit(ctx context.Context, input CreateInput) {
 	_ = s.Create(ctx, input)
 }
@@ -337,7 +415,13 @@ func parseType(raw string) (sqlc.NotificationType, error) {
 		sqlc.NotificationTypeSKILLREQUESTAPPROVED,
 		sqlc.NotificationTypeSKILLREQUESTREJECTED,
 		sqlc.NotificationTypeROADMAPREQUESTAPPROVED,
-		sqlc.NotificationTypeROADMAPREQUESTREJECTED:
+		sqlc.NotificationTypeROADMAPREQUESTREJECTED,
+		sqlc.NotificationTypeSKILLREQUESTREADY,
+		sqlc.NotificationTypeSKILLREQUESTFAILED,
+		sqlc.NotificationTypeROADMAPREQUESTREADY,
+		sqlc.NotificationTypeROADMAPREQUESTFAILED,
+		sqlc.NotificationTypeQUIZREADY,
+		sqlc.NotificationTypeQUIZFAILED:
 		return t, nil
 	default:
 		return "", apperrors.ErrBadRequest

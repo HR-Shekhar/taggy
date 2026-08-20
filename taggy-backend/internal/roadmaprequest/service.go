@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HR-Shekhar/taggy-backend/internal/aigen"
 	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/openrouter"
 	"github.com/HR-Shekhar/taggy-backend/internal/infrastructure/postgres/sqlc"
 	apperrors "github.com/HR-Shekhar/taggy-backend/internal/shared/errors"
@@ -28,17 +29,24 @@ type Notifier interface {
 	NotifyRoadmapRequestApproved(ctx context.Context, userID, skillID int64, skillSlug string, versionNumber int32)
 	NotifyRoadmapRequestRejected(ctx context.Context, userID int64, skillSlug, note string)
 	NotifyRoadmapUpdated(ctx context.Context, userID, skillID int64, skillSlug string, versionNumber int32)
+	NotifyRoadmapRequestReady(ctx context.Context, userID, skillID int64, skillSlug string)
+	NotifyRoadmapRequestFailed(ctx context.Context, userID int64, skillSlug, note string)
+}
+
+type JobPool interface {
+	Submit(job aigen.Job) error
 }
 
 type Service struct {
 	repo      *Repository
 	generator Generator
 	notifier  Notifier
+	pool      JobPool
 	log       zerolog.Logger
 }
 
-func NewService(repo *Repository, generator Generator, notifier Notifier, log zerolog.Logger) *Service {
-	return &Service{repo: repo, generator: generator, notifier: notifier, log: log}
+func NewService(repo *Repository, generator Generator, notifier Notifier, pool JobPool, log zerolog.Logger) *Service {
+	return &Service{repo: repo, generator: generator, notifier: notifier, pool: pool, log: log}
 }
 
 func (s *Service) GetUserPublicIDByUsername(ctx context.Context, username string) (uuid.UUID, error) {
@@ -90,41 +98,136 @@ func (s *Service) Create(ctx context.Context, userPublicID uuid.UUID, skillSlug 
 	if s.generator == nil || !s.generator.Available() {
 		return RequestView{}, logging.Reject(s.log, ErrAIUnavailable, "create roadmap request rejected: ai unavailable")
 	}
-
-	desc := ""
-	if skill.Description.Valid {
-		desc = skill.Description.String
+	if s.pool == nil {
+		return RequestView{}, logging.Reject(s.log, ErrAIUnavailable, "create roadmap request rejected: ai pool unavailable")
 	}
+
 	rationale := strings.TrimSpace(input.Rationale)
-	drafts, err := s.generator.GenerateRoadmap(ctx, skill.Name, desc, rationale)
-	if err != nil {
-		s.log.Warn().Err(err).Str("skill", skillSlug).Msg("roadmap edit ai generation failed")
-		return RequestView{}, logging.Reject(s.log, ErrAIFailed, "create roadmap request rejected: ai failed")
-	}
-
-	draftJSON, _ := json.Marshal(drafts)
 	created, err := s.repo.Create(ctx, sqlc.CreateRoadmapEditRequestParams{
 		SkillID:           skill.ID,
 		RequesterID:       user.ID,
 		Rationale:         pgtype.Text{String: rationale, Valid: rationale != ""},
+		Status:            sqlc.CatalogRequestStatusGENERATING,
 		BaseVersionNumber: active.VersionNumber,
-		DraftMilestones:   draftJSON,
+		DraftMilestones:   []byte("[]"),
 	})
 	if err != nil {
 		return RequestView{}, logging.Unexpected(s.log, err, "create roadmap request insert failed")
+	}
+
+	if err := s.enqueue(created.ID); err != nil {
+		note := "AI queue is full; please retry"
+		if _, ferr := s.repo.FailGenerating(ctx, created.ID, note); ferr != nil {
+			s.log.Error().Err(ferr).Int64("request_id", created.ID).Msg("fail roadmap request after queue full failed")
+		}
+		return RequestView{}, logging.Reject(s.log, ErrAIBusy, "create roadmap request rejected: ai queue full")
 	}
 
 	s.log.Info().
 		Str("request_id", created.PublicID.String()).
 		Str("skill", skillSlug).
 		Str("user", user.Username).
-		Msg("roadmap edit request created")
+		Msg("roadmap edit request accepted for async generation")
 
 	row, err := s.repo.GetByPublicID(ctx, created.PublicID)
 	if err != nil {
 		return RequestView{}, logging.Unexpected(s.log, err, "create roadmap request reload failed")
 	}
 	return toViewFromGet(row), nil
+}
+
+// RequeueGenerating re-enqueues GENERATING rows after restart.
+func (s *Service) RequeueGenerating(ctx context.Context) {
+	if s.pool == nil || s.generator == nil || !s.generator.Available() {
+		return
+	}
+	ids, err := s.repo.ListGeneratingIDs(ctx)
+	if err != nil {
+		s.log.Error().Err(err).Msg("list generating roadmap requests failed")
+		return
+	}
+	for _, id := range ids {
+		if err := s.enqueue(id); err != nil {
+			s.log.Warn().Err(err).Int64("id", id).Msg("requeue roadmap request failed")
+		}
+	}
+	if len(ids) > 0 {
+		s.log.Info().Int("count", len(ids)).Msg("requeued generating roadmap requests")
+	}
+}
+
+func (s *Service) enqueue(id int64) error {
+	return s.pool.Submit(func(ctx context.Context) {
+		s.generateDraft(ctx, id)
+	})
+}
+
+func (s *Service) generateDraft(ctx context.Context, id int64) {
+	req, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			s.log.Error().Err(err).Int64("id", id).Msg("roadmap request generate: get failed")
+		}
+		return
+	}
+	if req.Status != sqlc.CatalogRequestStatusGENERATING {
+		return
+	}
+
+	skill, err := s.repo.GetSkillBySlug(ctx, req.SkillSlug)
+	if err != nil {
+		s.log.Error().Err(err).Int64("id", id).Msg("roadmap request generate: skill lookup failed")
+		s.failRequest(ctx, id, req.RequesterID, req.SkillSlug, "AI generation failed; please submit again")
+		return
+	}
+	desc := ""
+	if skill.Description.Valid {
+		desc = skill.Description.String
+	}
+	rationale := ""
+	if req.Rationale.Valid {
+		rationale = req.Rationale.String
+	}
+
+	drafts, err := s.generator.GenerateRoadmap(ctx, skill.Name, desc, rationale)
+	if err != nil {
+		s.log.Warn().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Msg("roadmap edit ai generation failed")
+		note := "AI generation failed; please submit again"
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			note = "AI generation timed out; please submit again"
+		}
+		s.failRequest(ctx, id, req.RequesterID, req.SkillSlug, note)
+		return
+	}
+
+	draftJSON, _ := json.Marshal(drafts)
+	updated, err := s.repo.CompleteDraft(ctx, id, draftJSON)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return
+		}
+		s.log.Error().Err(err).Int64("id", id).Msg("complete roadmap request draft failed")
+		return
+	}
+
+	if s.notifier != nil {
+		s.notifier.NotifyRoadmapRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.SkillID, req.SkillSlug)
+	}
+	s.log.Info().
+		Str("request_id", updated.PublicID.String()).
+		Str("skill", req.SkillSlug).
+		Int("milestones", len(drafts)).
+		Msg("roadmap edit draft ready for admin review")
+}
+
+func (s *Service) failRequest(ctx context.Context, id, requesterID int64, skillSlug, note string) {
+	bg := context.WithoutCancel(ctx)
+	if _, ferr := s.repo.FailGenerating(bg, id, note); ferr != nil && !errors.Is(ferr, pgx.ErrNoRows) {
+		s.log.Error().Err(ferr).Int64("id", id).Msg("mark roadmap request failed")
+	}
+	if s.notifier != nil {
+		s.notifier.NotifyRoadmapRequestFailed(bg, requesterID, skillSlug, note)
+	}
 }
 
 func (s *Service) ListMine(ctx context.Context, userPublicID uuid.UUID) ([]RequestView, error) {

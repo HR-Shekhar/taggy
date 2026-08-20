@@ -30,8 +30,8 @@ import {
   Empty,
   ErrorBox,
   GenerationWaitNote,
-  Loading,
   PageHeader,
+  PageSkeleton,
 } from "@/components/app-ui";
 import { PremiumUpgradePrompt } from "@/components/premium-upgrade";
 import { toastApiError, toastError, toastSuccess } from "@/lib/toast";
@@ -151,7 +151,9 @@ export default function SkillDetailPage() {
       if (edits.ok) {
         setEditPending(
           (edits.data ?? []).some(
-            (r) => r.skill_slug === slug && r.status === "PENDING"
+            (r) =>
+              r.skill_slug === slug &&
+              (r.status === "PENDING" || r.status === "GENERATING")
           )
         );
       }
@@ -189,7 +191,7 @@ export default function SkillDetailPage() {
     return (done / progress.length) * 100;
   }, [progress]);
 
-  if (loading) return <Loading />;
+  if (loading) return <PageSkeleton variant="detail" />;
 
   const selectable = versions.filter((v) => v.status !== "DRAFT");
 
@@ -252,20 +254,21 @@ export default function SkillDetailPage() {
       ) : null}
 
       {progress != null ? (
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader>
             <CardTitle className="font-serif text-lg">
               Request roadmap update
             </CardTitle>
             <CardDescription>
               AI drafts a full course-style topic → subtopic outline (names only).
-              This can take up to a few minutes.
+              Generation runs in the background and can take several minutes.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {editPending ? (
               <p className="text-sm text-muted-foreground">
-                You already have a pending roadmap edit for this skill.{" "}
+                You already have a generating or pending roadmap edit for this
+                skill.{" "}
                 <Link href="/requests" className="underline">
                   View requests
                 </Link>
@@ -295,9 +298,17 @@ export default function SkillDetailPage() {
                       toastApiError(res, "Couldn't submit update");
                       return;
                     }
+                    const status = res.data?.status ?? "";
                     const count = res.data?.draft_milestones?.length ?? 0;
                     setEditPending(true);
                     setEditRationale("");
+                    if (status === "GENERATING") {
+                      toastSuccess(
+                        "AI is drafting your roadmap update in the background (this can take several minutes). You'll be notified when it's ready for admin review.",
+                        "Generating update"
+                      );
+                      return;
+                    }
                     toastSuccess(
                       count > 0
                         ? `Drafted ${count} milestones for admin review.`
@@ -314,7 +325,7 @@ export default function SkillDetailPage() {
         </Card>
       ) : null}
 
-      <Card className="rounded-xl ring-1 ring-foreground/10">
+      <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">Roadmap version</CardTitle>
           <CardDescription>
@@ -398,7 +409,7 @@ export default function SkillDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl ring-1 ring-foreground/10">
+      <Card>
         <CardHeader>
           <CardTitle className="font-serif text-lg">
             {selectedVersion != null ? `Milestones · v${selectedVersion}` : "Milestones"}
@@ -443,7 +454,7 @@ export default function SkillDetailPage() {
                         "min-w-0 flex-1 space-y-2 rounded-xl border p-4",
                         ("kind" in m && m.kind === "CHAPTER")
                           ? "border-amber-500/30 bg-amber-500/5"
-                          : "border-border/70 bg-card/40"
+                          : "border-border/70 bg-card"
                       )}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">

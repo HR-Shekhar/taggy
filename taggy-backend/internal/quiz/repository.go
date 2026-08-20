@@ -26,6 +26,10 @@ func (r *Repository) GetPodBySlug(ctx context.Context, slug string) (sqlc.GetPod
 	return r.queries.GetPodBySlug(ctx, slug)
 }
 
+func (r *Repository) GetPodByID(ctx context.Context, id int64) (sqlc.Pod, error) {
+	return r.queries.GetPodByID(ctx, id)
+}
+
 func (r *Repository) GetSkillBySlug(ctx context.Context, slug string) (sqlc.Skill, error) {
 	return r.queries.GetSkillBySlug(ctx, slug)
 }
@@ -59,8 +63,24 @@ func (r *Repository) CreateQuestion(ctx context.Context, arg sqlc.CreatePodQuizQ
 	return r.queries.CreatePodQuizQuestion(ctx, arg)
 }
 
+func (r *Repository) GetQuizByID(ctx context.Context, id int64) (sqlc.PodQuiz, error) {
+	return r.queries.GetPodQuizByID(ctx, id)
+}
+
 func (r *Repository) GetQuizByPublicID(ctx context.Context, id uuid.UUID) (sqlc.PodQuiz, error) {
 	return r.queries.GetPodQuizByPublicID(ctx, id)
+}
+
+func (r *Repository) ListGeneratingIDs(ctx context.Context) ([]int64, error) {
+	return r.queries.ListGeneratingPodQuizzes(ctx)
+}
+
+func (r *Repository) ActivateQuiz(ctx context.Context, id int64) (sqlc.PodQuiz, error) {
+	return r.queries.ActivatePodQuiz(ctx, id)
+}
+
+func (r *Repository) FailGenerating(ctx context.Context, id int64) (sqlc.PodQuiz, error) {
+	return r.queries.FailPodQuiz(ctx, id)
 }
 
 func (r *Repository) ListQuestions(ctx context.Context, quizID int64) ([]sqlc.PodQuizQuestion, error) {

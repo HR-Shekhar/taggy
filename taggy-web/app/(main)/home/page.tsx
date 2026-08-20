@@ -25,17 +25,17 @@ import {
   type MySkill,
   type ProgressSummary,
 } from "@/lib/api";
-import { Empty, Loading, PageHeader } from "@/components/app-ui";
+import {
+  Empty,
+  PageHeader,
+  PageSkeleton,
+  Section,
+} from "@/components/app-ui";
+import { EmptyArtPods, EmptyArtSkills } from "@/components/empty-art";
 import { toastApiError } from "@/lib/toast";
 import { CommunityLeaderboardPanel } from "@/components/community-leaderboard-panel";
 import { PodQuizPanel } from "@/components/pod-quiz-panel";
-import {
-  ActivityDots,
-  MiniBars,
-  ProgressRing,
-  Sparkline,
-  StackedBar,
-} from "@/components/charts";
+import { ActivityDots, MiniBars } from "@/components/charts";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -165,32 +165,15 @@ export default function HomePage() {
     () => bucketSessions(sessions, days14),
     [sessions, days14]
   );
-  const cumulative = useMemo(() => {
-    let sum = 0;
-    return fortnightMinutes.map((m) => {
-      sum += m;
-      return sum;
-    });
-  }, [fortnightMinutes]);
   const activeDays = weekMinutes.map((m) => m > 0);
 
-  if (loading) return <Loading />;
+  if (loading) return <PageSkeleton variant="dashboard" />;
 
   const currentStreak = summary?.current_streak ?? streak?.current_streak ?? 0;
   const longestStreak = summary?.longest_streak ?? streak?.longest_streak ?? 0;
-  const weekly = summary?.weekly_minutes ?? weekMinutes.reduce((a, b) => a + b, 0);
-  const monthly = summary?.monthly_minutes ?? 0;
-  const total = summary?.total_minutes ?? 0;
-  const streakRatio =
-    longestStreak > 0 ? Math.min(1, currentStreak / longestStreak) : currentStreak > 0 ? 1 : 0;
-  const weekGoal = Math.max(weekly, 150);
-  const weekPct = Math.min(1, weekly / weekGoal);
-  const restTotal = Math.max(total - monthly, 0);
-  const restMonth = Math.max(monthly - weekly, 0);
-
-  const dayLabels = days14.map((d) =>
-    d.toLocaleDateString(undefined, { weekday: "narrow" })
-  );
+  const weekly =
+    summary?.weekly_minutes ?? weekMinutes.reduce((a, b) => a + b, 0);
+  const fortnightTotal = fortnightMinutes.reduce((a, b) => a + b, 0);
 
   const primarySkill = skills[0];
   const primarySkillSlug = primarySkill?.skill_slug ?? "";
@@ -206,179 +189,249 @@ export default function HomePage() {
   const acceptedPodName =
     acceptedPod?.pod_name ?? acceptedPod?.name ?? acceptedPodSlug;
 
+  const primaryCta =
+    skills.length > 0
+      ? {
+          href: `/skills/${skills[0].skill_slug}`,
+          label: `Continue ${skills[0].skill_name}`,
+        }
+      : { href: "/skills", label: "Browse skills" };
+
   return (
-    <div className="space-y-6">
-      <form onSubmit={submitGlobalSearch} className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={searchQ}
-          onChange={(e) => setSearchQ(e.target.value)}
-          placeholder="Global search in Taggy"
-          aria-label="Global search in Taggy"
-          className="h-11 rounded-xl border-foreground/15 bg-background/80 pl-10 shadow-sm"
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader
+          title={displayName ? `Welcome back, ${displayName}` : "Home"}
+          description="Pick up where you left off."
         />
-      </form>
-
-      <PageHeader
-        title={displayName ? `Welcome back, ${displayName}` : "Home"}
-        description="Your skills, pods, and study rhythm in one place."
-      >
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/community"
-            className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
-          >
-            <MessageCircle className="size-4" />
-            Community & audio
-          </Link>
-          <Link
-            href="/skills"
-            className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
-          >
-            Browse skills
-          </Link>
-          <Link href="/progress" className={cn(buttonVariants(), "gap-1.5")}>
-            Log study
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </PageHeader>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between gap-2">
-              <CardDescription>Current streak</CardDescription>
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <Flame className="size-4 text-primary" />
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="flex items-center gap-4 pt-2">
-            <ProgressRing value={streakRatio} size={76}>
-              <div>
-                <div className="font-serif text-xl leading-none">{currentStreak}</div>
-                <div className="text-[10px] text-muted-foreground">days</div>
-              </div>
-            </ProgressRing>
-            <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-sm text-muted-foreground">
-                {longestStreak > 0 ? `Best ${longestStreak} days` : "Start today"}
-              </p>
-              <ActivityDots active={activeDays} />
-              <p className="text-[11px] text-muted-foreground">Last 7 days</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between gap-2">
-              <CardDescription>This week</CardDescription>
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <Timer className="size-4 text-primary" />
-              </span>
-            </div>
-            <CardTitle className="font-serif text-3xl tracking-tight">
-              {formatMinutes(weekly)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <MiniBars values={weekMinutes} />
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>{Math.round(weekPct * 100)}% of weekly pace</span>
-              <span>{formatMinutes(monthly)} / mo</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between gap-2">
-              <CardDescription>Total studied</CardDescription>
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <BookOpen className="size-4 text-primary" />
-              </span>
-            </div>
-            <CardTitle className="font-serif text-3xl tracking-tight">
-              {formatMinutes(total)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Sparkline values={cumulative.length > 1 ? cumulative : [0, total]} />
-            <StackedBar
-              segments={[
-                { value: weekly, label: "Week", className: "bg-primary" },
-                { value: restMonth, label: "Month", className: "bg-primary/55" },
-                { value: restTotal, label: "Earlier", className: "bg-primary/25" },
-              ]}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between gap-2">
-              <CardDescription>Notifications</CardDescription>
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <Bell className="size-4 text-primary" />
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="flex items-center gap-4 pt-2">
-            <ProgressRing
-              value={unread > 0 ? Math.min(1, unread / 10) : 0.08}
-              size={76}
-            >
-              <div className="font-serif text-xl leading-none">{unread}</div>
-            </ProgressRing>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                {unread > 0 ? "Unread alerts" : "You're caught up"}
-              </p>
-              {unread > 0 ? (
-                <Link
-                  href="/notifications"
-                  className="text-sm text-primary hover:underline"
-                >
-                  View inbox
-                </Link>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">
-                  {skills.length} skill{skills.length === 1 ? "" : "s"} active
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <form
+          onSubmit={submitGlobalSearch}
+          className="relative w-full shrink-0 sm:mt-1 sm:max-w-xs"
+        >
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="Search Taggy"
+            aria-label="Search Taggy"
+            className="h-10 rounded-xl border-border bg-card pl-10"
+          />
+        </form>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href={primaryCta.href} className={cn(buttonVariants(), "gap-1.5")}>
+          {primaryCta.label}
+          <ArrowRight className="size-4" />
+        </Link>
+        <Link
+          href="/progress"
+          className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
+        >
+          Log study
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
+        <div className="bg-card px-4 py-3">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Flame className="size-3.5 text-primary" />
+            Streak
+          </div>
+          <p className="mt-1 font-serif text-2xl tabular-nums">
+            {currentStreak}
+            <span className="ml-1 text-sm text-muted-foreground">days</span>
+          </p>
+          <div className="mt-2">
+            <ActivityDots active={activeDays} />
+          </div>
+        </div>
+        <div className="bg-card px-4 py-3">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Timer className="size-3.5 text-primary" />
+            This week
+          </div>
+          <p className="mt-1 font-serif text-2xl tabular-nums">
+            {formatMinutes(weekly)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Best streak {longestStreak}d
+          </p>
+        </div>
+        <div className="bg-card px-4 py-3">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <BookOpen className="size-3.5 text-primary" />
+            Skills
+          </div>
+          <p className="mt-1 font-serif text-2xl tabular-nums">{skills.length}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {pods.length} pod{pods.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <Link
+          href="/notifications"
+          className="bg-card px-4 py-3 transition-colors hover:bg-muted/40"
+        >
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Bell className="size-3.5 text-primary" />
+            Unread
+          </div>
+          <p className="mt-1 font-serif text-2xl tabular-nums">{unread}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {unread > 0 ? "Open inbox" : "All caught up"}
+          </p>
+        </Link>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Section
+          title="Continue learning"
+          action={
+            <Link
+              href="/skills"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              All skills
+            </Link>
+          }
+        >
+          {skills.length === 0 ? (
+            <Empty
+              art={<EmptyArtSkills />}
+              title="No skills yet"
+              description="Join a skill roadmap to start tracking milestones."
+              action={
+                <Link href="/skills" className={cn(buttonVariants())}>
+                  Browse skills
+                </Link>
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {skills.slice(0, 5).map((s) => (
+                <li key={s.skill_slug}>
+                  <Link
+                    href={`/skills/${s.skill_slug}`}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{s.skill_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {s.completed_count}/{s.milestone_count} milestones
+                      </p>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{
+                            width: `${Math.min(100, s.completion_percent || 0)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section
+          title="Your pods"
+          action={
+            <Link
+              href="/pods"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              All pods
+            </Link>
+          }
+        >
+          {pods.length === 0 ? (
+            <Empty
+              art={<EmptyArtPods />}
+              title="No pods yet"
+              description="Join a small group to stay accountable."
+              action={
+                <Link href="/pods" className={cn(buttonVariants())}>
+                  Find a pod
+                </Link>
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {pods.slice(0, 5).map((p, i) => {
+                const slug = p.slug ?? p.pod_slug ?? "";
+                const name = p.name ?? p.pod_name ?? slug;
+                return (
+                  <li key={slug || i}>
+                    <Link
+                      href={`/pods/${slug}`}
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
+                    >
+                      <Users className="size-4 shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{name}</p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {p.status ? (
+                            <Badge variant="secondary">{p.status}</Badge>
+                          ) : null}
+                          {p.role ? (
+                            <Badge variant="outline">{p.role}</Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MessageCircle className="size-3.5" />
+                        Chat
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Section>
+      </div>
+
+      <Section
+        title="Study activity"
+        description={
+          fortnightTotal > 0
+            ? `${formatMinutes(fortnightTotal)} over the last 14 days`
+            : "Log a study block to light up this chart"
+        }
+        action={
+          <Link
+            href="/progress"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            Details
+          </Link>
+        }
+      >
+        <div className="rounded-xl border border-border bg-card p-4">
+          <MiniBars values={fortnightMinutes} height={72} className="h-20" />
+        </div>
+      </Section>
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader className="flex-row items-start justify-between gap-3">
             <div>
               <CardTitle className="font-serif text-lg">Pod leaderboard</CardTitle>
               <CardDescription>
                 {acceptedPodSlug
                   ? `Members in ${acceptedPodName}`
-                  : "Join a pod to see member quiz scores"}
+                  : "Join a pod to see quiz scores"}
               </CardDescription>
             </div>
-            {acceptedPodSlug ? (
-              <Link
-                href={`/pods/${acceptedPodSlug}`}
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Open pod
-              </Link>
-            ) : (
-              <Link
-                href="/pods"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Find pod
-              </Link>
-            )}
+            <Link
+              href={acceptedPodSlug ? `/pods/${acceptedPodSlug}` : "/pods"}
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              {acceptedPodSlug ? "Open" : "Find pod"}
+            </Link>
           </CardHeader>
           <CardContent>
             {acceptedPodSlug ? (
@@ -388,17 +441,20 @@ export default function HomePage() {
                 mode="leaderboard"
               />
             ) : (
-              <Empty>
-                No accepted pod yet.{" "}
-                <Link href="/pods" className="text-primary hover:underline">
-                  Join or create one
-                </Link>
-              </Empty>
+              <Empty
+                art={<EmptyArtPods />}
+                title="No pod yet"
+                action={
+                  <Link href="/pods" className="text-primary hover:underline">
+                    Join or create one
+                  </Link>
+                }
+              />
             )}
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader className="flex-row items-start justify-between gap-3">
             <div>
               <CardTitle className="font-serif text-lg">
@@ -406,209 +462,34 @@ export default function HomePage() {
               </CardTitle>
               <CardDescription>
                 {primarySkillSlug
-                  ? `Pod standings for ${primarySkill?.skill_name ?? primarySkillSlug}`
-                  : "Join a skill to see community pod rankings"}
+                  ? `Standings for ${primarySkill?.skill_name ?? primarySkillSlug}`
+                  : "Join a skill to see rankings"}
               </CardDescription>
             </div>
-            {primarySkillSlug ? (
-              <Link
-                href={`/community/${primarySkillSlug}`}
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Community
-              </Link>
-            ) : (
-              <Link
-                href="/skills"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Skills
-              </Link>
-            )}
+            <Link
+              href={
+                primarySkillSlug
+                  ? `/community/${primarySkillSlug}`
+                  : "/skills"
+              }
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
+              {primarySkillSlug ? "Community" : "Skills"}
+            </Link>
           </CardHeader>
           <CardContent>
             {primarySkillSlug ? (
               <CommunityLeaderboardPanel skillSlug={primarySkillSlug} compact />
             ) : (
-              <Empty>
-                No skills yet.{" "}
-                <Link href="/skills" className="text-primary hover:underline">
-                  Browse skills
-                </Link>
-              </Empty>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="rounded-xl ring-1 ring-foreground/10">
-        <CardHeader className="flex-row items-start justify-between gap-3">
-          <div>
-            <CardTitle className="font-serif text-lg">Study activity</CardTitle>
-            <CardDescription>Minutes logged over the last 14 days</CardDescription>
-          </div>
-          <Link
-            href="/progress"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Details
-          </Link>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <MiniBars values={fortnightMinutes} height={72} className="h-20" />
-          <div className="hidden justify-between text-[10px] text-muted-foreground sm:flex">
-            {dayLabels.map((label, i) => (
-              <span key={i}>{label}</span>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {fortnightMinutes.reduce((a, b) => a + b, 0) > 0
-              ? `${formatMinutes(fortnightMinutes.reduce((a, b) => a + b, 0))} across ${fortnightMinutes.filter((m) => m > 0).length} active days`
-              : "No sessions yet — log a study block to light up this chart."}
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader className="flex-row items-start justify-between gap-3">
-            <div>
-              <CardTitle className="font-serif text-lg">My skills</CardTitle>
-              <CardDescription>
-                Roadmaps you&apos;re actively learning
-              </CardDescription>
-            </div>
-            <Link
-              href="/skills"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            >
-              All
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {skills.length === 0 ? (
-              <Empty>
-                No skills yet.{" "}
-                <Link href="/skills" className="text-primary hover:underline">
-                  Browse skills
-                </Link>
-              </Empty>
-            ) : (
-              <ul className="divide-y divide-border">
-                {skills.map((s) => (
-                  <li
-                    key={s.skill_slug}
-                    className="space-y-2 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link
-                          href={`/skills/${s.skill_slug}`}
-                          className="truncate font-medium hover:text-primary"
-                        >
-                          {s.skill_name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          Roadmap v{s.roadmap_version_number} ·{" "}
-                          {s.completed_count}/{s.milestone_count} milestones
-                        </p>
-                      </div>
-                      <Link
-                        href={`/skills/${s.skill_slug}`}
-                        className={cn(buttonVariants({ size: "sm" }), "gap-1")}
-                      >
-                        Open
-                        <ArrowRight className="size-3.5" />
-                      </Link>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/community/${s.skill_slug}`}
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "sm" }),
-                          "gap-1"
-                        )}
-                      >
-                        <MessageCircle className="size-3.5" />
-                        Chat
-                      </Link>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{
-                          width: `${Math.min(100, s.completion_percent || 0)}%`,
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader className="flex-row items-start justify-between gap-3">
-            <div>
-              <CardTitle className="font-serif text-lg">My pods</CardTitle>
-              <CardDescription>
-                Small groups keeping you accountable
-              </CardDescription>
-            </div>
-            <Link
-              href="/pods"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            >
-              All
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {pods.length === 0 ? (
-              <Empty>
-                No pods yet.{" "}
-                <Link href="/pods" className="text-primary hover:underline">
-                  Find or create one
-                </Link>
-              </Empty>
-            ) : (
-              <ul className="divide-y divide-border">
-                {pods.map((p, i) => {
-                  const slug = p.slug ?? p.pod_slug ?? "";
-                  const name = p.name ?? p.pod_name ?? slug;
-                  return (
-                    <li
-                      key={slug || i}
-                      className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0 space-y-1">
-                        <Link
-                          href={`/pods/${slug}`}
-                          className="flex items-center gap-2 truncate font-medium hover:text-primary"
-                        >
-                          <Users className="size-3.5 shrink-0 text-primary" />
-                          {name}
-                        </Link>
-                        <div className="flex flex-wrap gap-1.5">
-                          {p.status ? (
-                            <Badge variant="secondary">{p.status}</Badge>
-                          ) : null}
-                          {p.role ? (
-                            <Badge variant="outline">{p.role}</Badge>
-                          ) : null}
-                        </div>
-                      </div>
-                      <Link
-                        href={`/pods/${slug}`}
-                        className={cn(buttonVariants({ size: "sm" }), "gap-1")}
-                      >
-                        Chat & audio
-                        <ArrowRight className="size-3.5" />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              <Empty
+                art={<EmptyArtSkills />}
+                title="No skills yet"
+                action={
+                  <Link href="/skills" className="text-primary hover:underline">
+                    Browse skills
+                  </Link>
+                }
+              />
             )}
           </CardContent>
         </Card>

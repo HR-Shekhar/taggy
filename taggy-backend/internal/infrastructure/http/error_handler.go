@@ -282,6 +282,9 @@ func ErrorHandler(log zerolog.Logger) echo.HTTPErrorHandler {
 
 			case errors.Is(err, skillrequest.ErrAIUnavailable),
 				errors.Is(err, roadmaprequest.ErrAIUnavailable),
+				errors.Is(err, skillrequest.ErrAIBusy),
+				errors.Is(err, roadmaprequest.ErrAIBusy),
+				errors.Is(err, quiz.ErrAIBusy),
 				errors.Is(err, apperrors.ErrServiceUnavailable):
 				status = http.StatusServiceUnavailable
 				message = err.Error()
@@ -336,6 +339,8 @@ func ErrorHandler(log zerolog.Logger) echo.HTTPErrorHandler {
 
 			case errors.Is(err, quiz.ErrNoCompletedTopics),
 				errors.Is(err, quiz.ErrQuizNotInProgress),
+				errors.Is(err, quiz.ErrQuizGenerating),
+				errors.Is(err, quiz.ErrQuizFailed),
 				errors.Is(err, quiz.ErrAlreadyAnswered),
 				errors.Is(err, quiz.ErrAnswerNotStarted),
 				errors.Is(err, quiz.ErrInProgressExists),
@@ -343,7 +348,8 @@ func ErrorHandler(log zerolog.Logger) echo.HTTPErrorHandler {
 				status = http.StatusConflict
 				message = err.Error()
 
-			case errors.Is(err, quiz.ErrAIUnavailable):
+			case errors.Is(err, quiz.ErrAIUnavailable),
+				errors.Is(err, quiz.ErrAIBusy):
 				status = http.StatusServiceUnavailable
 				message = err.Error()
 

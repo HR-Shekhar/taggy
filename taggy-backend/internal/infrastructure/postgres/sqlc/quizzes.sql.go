@@ -15,12 +15,40 @@ const abandonPodQuiz = `-- name: AbandonPodQuiz :one
 UPDATE pod_quiz
 SET status = 'ABANDONED'
 WHERE id = $1
-  AND status = 'IN_PROGRESS'
+  AND status IN ('IN_PROGRESS', 'GENERATING')
 RETURNING id, public_id, pod_id, user_id, skill_id, status, topic_count, correct_count, score, completed_topic_titles, created_at, completed_at
 `
 
 func (q *Queries) AbandonPodQuiz(ctx context.Context, id int64) (PodQuiz, error) {
 	row := q.db.QueryRow(ctx, abandonPodQuiz, id)
+	var i PodQuiz
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.PodID,
+		&i.UserID,
+		&i.SkillID,
+		&i.Status,
+		&i.TopicCount,
+		&i.CorrectCount,
+		&i.Score,
+		&i.CompletedTopicTitles,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const activatePodQuiz = `-- name: ActivatePodQuiz :one
+UPDATE pod_quiz
+SET status = 'IN_PROGRESS'
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, pod_id, user_id, skill_id, status, topic_count, correct_count, score, completed_topic_titles, created_at, completed_at
+`
+
+func (q *Queries) ActivatePodQuiz(ctx context.Context, id int64) (PodQuiz, error) {
+	row := q.db.QueryRow(ctx, activatePodQuiz, id)
 	var i PodQuiz
 	err := row.Scan(
 		&i.ID,
@@ -101,7 +129,7 @@ INSERT INTO pod_quiz (
     topic_count,
     completed_topic_titles
 ) VALUES (
-    $1, $2, $3, 'IN_PROGRESS', $4, $5
+    $1, $2, $3, $4, $5, $6
 )
 RETURNING id, public_id, pod_id, user_id, skill_id, status, topic_count, correct_count, score, completed_topic_titles, created_at, completed_at
 `
@@ -110,6 +138,7 @@ type CreatePodQuizParams struct {
 	PodID                int64
 	UserID               int64
 	SkillID              int64
+	Status               PodQuizStatus
 	TopicCount           int32
 	CompletedTopicTitles []byte
 }
@@ -119,6 +148,7 @@ func (q *Queries) CreatePodQuiz(ctx context.Context, arg CreatePodQuizParams) (P
 		arg.PodID,
 		arg.UserID,
 		arg.SkillID,
+		arg.Status,
 		arg.TopicCount,
 		arg.CompletedTopicTitles,
 	)
@@ -193,11 +223,39 @@ func (q *Queries) CreatePodQuizQuestion(ctx context.Context, arg CreatePodQuizQu
 	return i, err
 }
 
+const failPodQuiz = `-- name: FailPodQuiz :one
+UPDATE pod_quiz
+SET status = 'FAILED'
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, pod_id, user_id, skill_id, status, topic_count, correct_count, score, completed_topic_titles, created_at, completed_at
+`
+
+func (q *Queries) FailPodQuiz(ctx context.Context, id int64) (PodQuiz, error) {
+	row := q.db.QueryRow(ctx, failPodQuiz, id)
+	var i PodQuiz
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.PodID,
+		&i.UserID,
+		&i.SkillID,
+		&i.Status,
+		&i.TopicCount,
+		&i.CorrectCount,
+		&i.Score,
+		&i.CompletedTopicTitles,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const getInProgressPodQuiz = `-- name: GetInProgressPodQuiz :one
 SELECT id, public_id, pod_id, user_id, skill_id, status, topic_count, correct_count, score, completed_topic_titles, created_at, completed_at FROM pod_quiz
 WHERE user_id = $1
   AND pod_id = $2
-  AND status = 'IN_PROGRESS'
+  AND status IN ('IN_PROGRESS', 'GENERATING')
 `
 
 type GetInProgressPodQuizParams struct {
@@ -248,6 +306,31 @@ func (q *Queries) GetPodQuizAnswer(ctx context.Context, arg GetPodQuizAnswerPara
 		&i.StartedAt,
 		&i.AnsweredAt,
 		&i.TimedOut,
+	)
+	return i, err
+}
+
+const getPodQuizByID = `-- name: GetPodQuizByID :one
+SELECT id, public_id, pod_id, user_id, skill_id, status, topic_count, correct_count, score, completed_topic_titles, created_at, completed_at FROM pod_quiz
+WHERE id = $1
+`
+
+func (q *Queries) GetPodQuizByID(ctx context.Context, id int64) (PodQuiz, error) {
+	row := q.db.QueryRow(ctx, getPodQuizByID, id)
+	var i PodQuiz
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.PodID,
+		&i.UserID,
+		&i.SkillID,
+		&i.Status,
+		&i.TopicCount,
+		&i.CorrectCount,
+		&i.Score,
+		&i.CompletedTopicTitles,
+		&i.CreatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -400,6 +483,33 @@ func (q *Queries) ListCompletedTopicTitlesForUserSkill(ctx context.Context, arg 
 			return nil, err
 		}
 		items = append(items, title)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGeneratingPodQuizzes = `-- name: ListGeneratingPodQuizzes :many
+SELECT id
+FROM pod_quiz
+WHERE status = 'GENERATING'
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListGeneratingPodQuizzes(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listGeneratingPodQuizzes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

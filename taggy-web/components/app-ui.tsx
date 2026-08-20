@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyArtGeneric } from "@/components/empty-art";
 import { CheckCircle2, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/toast";
@@ -38,7 +39,7 @@ export function ErrorBox({
     <div
       role="alert"
       className={cn(
-        "rounded-lg border border-border/80 bg-muted/50 px-3 py-2.5 text-sm transition-all duration-300 ease-out",
+        "rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm transition-all duration-300 ease-out",
         visible ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"
       )}
     >
@@ -84,7 +85,7 @@ export function SuccessDialog({
       <Card
         role="dialog"
         aria-modal="true"
-        className="relative z-10 w-full max-w-md rounded-xl border border-border/70 bg-card/95 shadow-lg duration-200 animate-in fade-in zoom-in-95"
+        className="relative z-10 w-full max-w-md shadow-lg duration-200 animate-in fade-in zoom-in-95"
       >
         <CardHeader className="space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -120,14 +121,14 @@ export function SuccessDialog({
 
 export function GenerationWaitNote({
   active,
-  label = "AI is drafting the roadmap. This can take up to a few minutes depending on size — keep this tab open.",
+  label = "AI is drafting in the background — this can take several minutes. You can leave this page; we'll notify you when it's ready.",
 }: {
   active: boolean;
   label?: string;
 }) {
   if (!active) return null;
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground transition-all duration-300">
+    <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground transition-all duration-300">
       <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
       <p>{label}</p>
     </div>
@@ -136,16 +137,111 @@ export function GenerationWaitNote({
 
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <Loader2 className="size-4 animate-spin" />
       <span>{label}</span>
     </div>
   );
 }
 
-export function Empty({ children }: { children: ReactNode }) {
+export function PageSkeleton({
+  variant = "dashboard",
+}: {
+  variant?: "dashboard" | "list" | "detail";
+}) {
+  if (variant === "list") {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-8 w-48 rounded-lg bg-muted" />
+        <div className="h-4 w-72 max-w-full rounded bg-muted/80" />
+        <div className="space-y-2 pt-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 rounded-xl border border-border bg-card" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (variant === "detail") {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-9 w-64 rounded-lg bg-muted" />
+        <div className="h-4 w-96 max-w-full rounded bg-muted/80" />
+        <div className="h-48 rounded-xl border border-border bg-card" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-12 rounded-lg bg-muted/60" />
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
-    <p className="rounded-lg border border-dashed border-border bg-muted/35 px-4 py-8 text-center text-sm text-muted-foreground backdrop-blur-sm">
+    <div className="space-y-6 animate-pulse">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <div className="h-9 w-56 rounded-lg bg-muted" />
+          <div className="h-4 w-72 max-w-full rounded bg-muted/80" />
+        </div>
+        <div className="h-9 w-28 rounded-lg bg-muted" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl border border-border bg-card" />
+        ))}
+      </div>
+      <div className="h-56 rounded-xl border border-border bg-card" />
+    </div>
+  );
+}
+
+export function Empty({
+  children,
+  title,
+  description,
+  action,
+  art,
+  className,
+}: {
+  children?: ReactNode;
+  title?: string;
+  description?: string;
+  action?: ReactNode;
+  art?: ReactNode;
+  className?: string;
+}) {
+  if (title || description || action || art) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center",
+          className
+        )}
+      >
+        {art ?? <EmptyArtGeneric />}
+        {title ? (
+          <p className="mt-4 font-serif text-lg text-foreground">{title}</p>
+        ) : null}
+        {description ? (
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+        {children ? (
+          <div className="mt-2 text-sm text-muted-foreground">{children}</div>
+        ) : null}
+        {action ? <div className="mt-5">{action}</div> : null}
+      </div>
+    );
+  }
+
+  return (
+    <p
+      className={cn(
+        "rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground",
+        className
+      )}
+    >
       {children}
     </p>
   );
@@ -186,7 +282,7 @@ export function FormCard({
   extra?: ReactNode;
 }) {
   return (
-    <Card className="rounded-xl border border-border/70 bg-card/60 shadow-sm ring-0 backdrop-blur-md">
+    <Card>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -203,12 +299,7 @@ export function FormCard({
           {children}
         </CardContent>
         <CardFooter className="mx-auto w-full max-w-[14rem] flex-col gap-4 border-0 bg-transparent">
-          <Button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-full"
-            size="lg"
-          >
+          <Button type="submit" disabled={busy} className="w-full" size="lg">
             {busy && <Loader2 className="size-4 animate-spin" />}
             {busy ? "Please wait…" : submitLabel}
           </Button>
@@ -233,16 +324,53 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="space-y-1">
-        <h1 className="font-serif text-2xl font-medium tracking-tight sm:text-3xl">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0 space-y-1.5">
+        <h1 className="font-serif text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
           {title}
         </h1>
         {description && (
-          <p className="text-muted-foreground">{description}</p>
+          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            {description}
+          </p>
         )}
       </div>
-      {children}
+      {children ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>
+      ) : null}
     </div>
+  );
+}
+
+export function Section({
+  title,
+  description,
+  action,
+  children,
+  className,
+}: {
+  title?: string;
+  description?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn("space-y-3", className)}>
+      {(title || action) && (
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            {title ? (
+              <h2 className="font-serif text-xl text-foreground">{title}</h2>
+            ) : null}
+            {description ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+          {action}
+        </div>
+      )}
+      {children}
+    </section>
   );
 }

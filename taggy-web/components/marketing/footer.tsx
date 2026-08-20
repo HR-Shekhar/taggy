@@ -26,7 +26,7 @@ export function CtaSection() {
 export function SiteFooter() {
   return (
     <footer className="px-4 pb-8 sm:px-6">
-      <div className="mx-auto max-w-6xl overflow-visible rounded-xl border border-border/70 bg-card/55 shadow-sm backdrop-blur-md">
+      <div className="mx-auto max-w-6xl overflow-visible rounded-xl border border-border/60 bg-card/45 shadow-sm backdrop-blur-md dark:bg-card/40">
         <div className="relative px-4 pb-2 pt-6 text-center sm:px-6 sm:pt-8">
           <p className="overflow-visible bg-gradient-to-b from-foreground to-transparent bg-clip-text font-serif text-[clamp(5.5rem,20vw,12rem)] leading-[1.15] tracking-tight text-transparent">
             Taggy

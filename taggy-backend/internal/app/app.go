@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/HR-Shekhar/taggy-backend/internal/api"
+	"github.com/HR-Shekhar/taggy-backend/internal/aigen"
 	"github.com/HR-Shekhar/taggy-backend/internal/audio"
 	"github.com/HR-Shekhar/taggy-backend/internal/auth"
 	"github.com/HR-Shekhar/taggy-backend/internal/billing"
@@ -51,6 +52,7 @@ type App struct {
 	DB           *pgxpool.Pool
 	Echo         *echo.Echo
 	audioService *audio.Service
+	aiPool       *aigen.Pool
 }
 
 func New() (*App, error) {
@@ -135,7 +137,8 @@ func New() (*App, error) {
 	aiClient := openrouter.NewWithOptions(apiKey, model, baseURL, openrouter.Options{
 		MaxTokens: 8192,
 		JSONMode:  jsonMode,
-		Timeout:   3 * time.Minute,
+		// Per-attempt HTTP timeout; pool job timeout (15m) bounds total retries.
+		Timeout: 10 * time.Minute,
 	}, log)
 	if !aiClient.Available() {
 		log.Warn().Msg("NVIDIA_API_KEY / AI_API_KEY not set; AI roadmap generation disabled")
@@ -147,12 +150,19 @@ func New() (*App, error) {
 			Msg("AI roadmap generator configured")
 	}
 
+	aiPool := aigen.NewPool(aigen.Config{
+		Workers:    2,
+		QueueSize:  64,
+		JobTimeout: 15 * time.Minute,
+	}, log)
+	aiPool.Start()
+
 	skillRequestRepo := skillrequest.NewRepository(db)
-	skillRequestService := skillrequest.NewService(skillRequestRepo, aiClient, notificationService, log)
+	skillRequestService := skillrequest.NewService(skillRequestRepo, aiClient, notificationService, aiPool, log)
 	skillRequestHandler := skillrequest.NewHandler(skillRequestService, log)
 
 	roadmapRequestRepo := roadmaprequest.NewRepository(db)
-	roadmapRequestService := roadmaprequest.NewService(roadmapRequestRepo, aiClient, notificationService, log)
+	roadmapRequestService := roadmaprequest.NewService(roadmapRequestRepo, aiClient, notificationService, aiPool, log)
 	roadmapRequestHandler := roadmaprequest.NewHandler(roadmapRequestService, log)
 
 	skillRepo := skill.NewRepository(db)
@@ -216,8 +226,12 @@ func New() (*App, error) {
 	}
 
 	quizRepo := quiz.NewRepository(db)
-	quizService := quiz.NewService(quizRepo, aiClient, log)
+	quizService := quiz.NewService(quizRepo, aiClient, notificationService, aiPool, log)
 	quizHandler := quiz.NewHandler(quizService, log)
+
+	skillRequestService.RequeueGenerating(context.Background())
+	roadmapRequestService.RequeueGenerating(context.Background())
+	quizService.RequeueGenerating(context.Background())
 
 	jwtMiddleware := auth.JWT(jwtService, log)
 	optionalJWTMiddleware := auth.OptionalJWT(jwtService, log)
@@ -301,6 +315,7 @@ func New() (*App, error) {
 		DB:           db,
 		Echo:         e,
 		audioService: audioService,
+		aiPool:       aiPool,
 	}, nil
 }
 
@@ -351,6 +366,10 @@ func (a *App) Run() error {
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
+	if a.aiPool != nil {
+		a.aiPool.Shutdown(ctx)
+	}
+
 	if err := a.Echo.Shutdown(ctx); err != nil {
 		return err
 	}

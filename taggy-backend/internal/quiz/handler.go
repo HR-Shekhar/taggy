@@ -30,8 +30,8 @@ func (h *Handler) Start(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Info().Str("quiz_id", resp.ID).Msg("pod quiz started")
-	return c.JSON(http.StatusCreated, resp)
+	log.Info().Str("quiz_id", resp.ID).Str("status", resp.Status).Msg("pod quiz accepted for generation")
+	return c.JSON(http.StatusAccepted, resp)
 }
 
 func (h *Handler) Get(c echo.Context) error {

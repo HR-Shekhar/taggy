@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Antic, JetBrains_Mono } from "next/font/google";
+import { Antic, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PageBackground } from "@/components/page-background";
@@ -10,12 +10,17 @@ import { cn } from "@/lib/utils";
 const antic = Antic({
   weight: "400",
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-antic",
+});
+
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-source-serif",
 });
 
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-jetbrains",
 });
 
 export const metadata: Metadata = {
@@ -32,10 +37,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn(antic.variable, jetbrains.variable)}
+      className={cn(
+        antic.variable,
+        sourceSerif.variable,
+        jetbrains.variable,
+        "font-sans"
+      )}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-transparent font-sans antialiased">
+      <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

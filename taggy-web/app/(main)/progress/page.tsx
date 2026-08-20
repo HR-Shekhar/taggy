@@ -27,7 +27,7 @@ import {
   type MySkill,
   type ProgressSummary,
 } from "@/lib/api";
-import { Empty, Loading, PageHeader } from "@/components/app-ui";
+import { Empty, PageHeader, PageSkeleton } from "@/components/app-ui";
 import { PodQuizPanel } from "@/components/pod-quiz-panel";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 import { Badge } from "@/components/ui/badge";
@@ -344,7 +344,7 @@ function ProgressInner() {
     return (done / milestones.length) * 100;
   }, [milestones]);
 
-  if (loading) return <Loading />;
+  if (loading) return <PageSkeleton variant="dashboard" />;
 
   const formatMinutes = (mins: number) => {
     if (mins < 60) return `${mins}m`;
@@ -360,7 +360,7 @@ function ProgressInner() {
         description="Complete milestones, take pod quizzes, and log study time."
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Flame className="size-4 text-primary" /> Current streak
@@ -373,7 +373,7 @@ function ProgressInner() {
             Best {streak?.longest_streak ?? 0} days
           </CardContent>
         </Card>
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Timer className="size-4 text-primary" /> This week
@@ -386,7 +386,7 @@ function ProgressInner() {
             {formatMinutes(summary?.monthly_minutes ?? 0)} this month
           </CardContent>
         </Card>
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total studied</CardDescription>
             <CardTitle className="font-serif text-3xl">
@@ -397,7 +397,7 @@ function ProgressInner() {
             Across all enrolled skills
           </CardContent>
         </Card>
-        <Card className="rounded-xl ring-1 ring-foreground/10">
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription>Last activity</CardDescription>
             <CardTitle className="font-serif text-xl">
@@ -410,7 +410,7 @@ function ProgressInner() {
         </Card>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-border/70 bg-card/40 px-4 py-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3">
         <div className="space-y-2 min-w-[12rem] flex-1 max-w-md">
           <Label htmlFor="progress-skill">Skill</Label>
           <select
@@ -460,7 +460,7 @@ function ProgressInner() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <Card className="rounded-xl ring-1 ring-foreground/10 lg:min-h-[36rem]">
+        <Card className=" lg:min-h-[36rem]">
           <CardHeader>
             <CardTitle className="font-serif text-lg">Roadmap</CardTitle>
             <CardDescription>
@@ -530,7 +530,7 @@ function ProgressInner() {
                         "rounded-xl border p-4",
                         group.allComplete
                           ? "border-primary/25 bg-primary/5"
-                          : "border-border/80 bg-card/50"
+                          : "border-border bg-card"
                       )}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -706,7 +706,7 @@ function ProgressInner() {
         </Card>
 
         <div className="flex flex-col gap-6">
-          <Card className="rounded-xl ring-1 ring-foreground/10">
+          <Card>
             <CardHeader>
               <CardTitle className="font-serif text-lg">Pod quiz</CardTitle>
               <CardDescription>
@@ -749,7 +749,7 @@ function ProgressInner() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl ring-1 ring-foreground/10">
+          <Card>
             <CardHeader>
               <CardTitle className="font-serif text-lg">
                 Log study session
@@ -806,7 +806,7 @@ function ProgressInner() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl ring-1 ring-foreground/10">
+          <Card>
             <CardHeader>
               <CardTitle className="font-serif text-lg">
                 Recent sessions
@@ -840,7 +840,7 @@ function ProgressInner() {
 
 export default function ProgressPage() {
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense fallback={<PageSkeleton variant="dashboard" />}>
       <ProgressInner />
     </Suspense>
   );

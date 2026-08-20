@@ -1,45 +1,87 @@
 "use client";
 
 import Link from "next/link";
+import { Check, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/app-ui";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+const freeFeatures = [
+  "1 active skill",
+  "Roadmaps & milestones",
+  "Pods & community chat",
+  "Study streaks & progress",
+];
+
+const premiumFeatures = [
+  "Unlimited active skills",
+  "Everything in Free",
+  "Priority skill requests",
+  "One-time unlock (coming soon)",
+];
 
 export default function UpgradePage() {
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="mx-auto max-w-4xl space-y-8">
       <PageHeader
         title="Taggy Premium"
-        description="Unlimited skills and more — launching soon."
+        description="Follow more skills without hitting the free-plan limit."
       />
 
-      <Card className="rounded-xl ring-1 ring-foreground/10">
-        <CardHeader>
-          <CardTitle className="font-serif text-2xl">Coming soon</CardTitle>
-          <CardDescription>
-            We&apos;re finishing Premium billing. For now, free accounts can
-            follow one active skill. Premium will unlock unlimited skill
-            enrollments.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            <li>Unlimited active skills</li>
-            <li>One-time unlock (Razorpay)</li>
-            <li>Same roadmaps, pods, and communities</li>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <p className="text-sm font-medium text-muted-foreground">Free</p>
+          <h2 className="mt-1 font-serif text-2xl">Starter</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Great for focusing on one skill at a time.
+          </p>
+          <ul className="mt-6 space-y-2.5">
+            {freeFeatures.map((f) => (
+              <li key={f} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                {f}
+              </li>
+            ))}
           </ul>
-          <Link href="/skills" className={cn(buttonVariants())}>
-            Back to skills
+          <Link
+            href="/skills"
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "mt-6 w-full"
+            )}
+          >
+            Continue free
           </Link>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="relative rounded-xl border border-primary/30 bg-primary/5 p-6">
+          <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
+            <Sparkles className="size-3" />
+            Soon
+          </span>
+          <p className="text-sm font-medium text-primary">Premium</p>
+          <h2 className="mt-1 font-serif text-2xl">Unlimited</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Billing is finishing up. You&apos;ll unlock unlimited skill
+            enrollments with a one-time purchase.
+          </p>
+          <ul className="mt-6 space-y-2.5">
+            {premiumFeatures.map((f) => (
+              <li key={f} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            disabled
+            className={cn(buttonVariants(), "mt-6 w-full opacity-60")}
+          >
+            Checkout coming soon
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

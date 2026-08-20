@@ -36,22 +36,22 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="border-b border-border/60 py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <section id="features" className="border-b border-border/50 py-20">
+      <div className="mx-auto max-w-5xl px-6 sm:px-8 lg:px-10">
         <Reveal className="mx-auto mb-12 max-w-2xl text-center">
           <h2 className="font-serif text-3xl tracking-tight sm:text-4xl">
             Everything you need to stay on track
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Taggy is not another course catalog. It is a system for showing up
-            consistently with people who care.
+            Not another course catalog — a system for showing up with people who
+            care.
           </p>
         </Reveal>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f, i) => (
-            <Reveal key={f.title} delay={i * 80}>
-              <div className="rounded-xl border border-border/70 bg-card/55 p-6 shadow-sm backdrop-blur-md">
-                <CheckCircle2 className="mb-4 size-5 text-primary" />
+            <Reveal key={f.title} delay={i * 60}>
+              <div className="h-full rounded-xl border border-border/60 bg-card/45 p-5 shadow-sm backdrop-blur-md dark:bg-card/40">
+                <CheckCircle2 className="mb-3 size-5 text-primary" />
                 <h3 className="font-medium">{f.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {f.description}
@@ -85,27 +85,29 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <Reveal className="mb-12">
+    <section id="how-it-works" className="border-b border-border/50 py-20">
+      <div className="mx-auto max-w-5xl px-6 sm:px-8 lg:px-10">
+        <Reveal className="mb-12 max-w-xl">
           <h2 className="font-serif text-3xl tracking-tight sm:text-4xl">
             How it works
           </h2>
-          <p className="mt-3 max-w-xl text-muted-foreground">
+          <p className="mt-3 text-muted-foreground">
             Three steps from curious to consistent.
           </p>
         </Reveal>
-        <div className="grid gap-6 lg:grid-cols-3">
+        <ol className="grid gap-4 lg:grid-cols-3">
           {steps.map((s, i) => (
             <Reveal key={s.step} delay={i * 100}>
-              <div className="relative rounded-xl bg-secondary/50 p-6">
+              <li className="h-full rounded-xl border border-border/60 bg-card/45 p-5 shadow-sm backdrop-blur-md dark:bg-card/40">
                 <span className="font-mono text-sm text-primary">{s.step}</span>
-                <h3 className="mt-3 text-lg font-medium">{s.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{s.text}</p>
-              </div>
+                <h3 className="mt-3 font-serif text-xl">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {s.text}
+                </p>
+              </li>
             </Reveal>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );

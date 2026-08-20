@@ -66,8 +66,8 @@ func (h *Handler) Create(c echo.Context) error {
 			Message:         "Similar skills found. Review them or resubmit with force=true.",
 		})
 	}
-	log.Info().Str("request_id", result.Request.ID).Msg("skill request created")
-	return c.JSON(http.StatusCreated, createResponse{Request: &result.Request})
+	log.Info().Str("request_id", result.Request.ID).Msg("skill request accepted for generation")
+	return c.JSON(http.StatusAccepted, createResponse{Request: &result.Request})
 }
 
 func (h *Handler) ListMine(c echo.Context) error {

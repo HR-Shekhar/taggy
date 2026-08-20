@@ -5,16 +5,10 @@ import { useEffect, useState } from "react";
 import { Headphones, MessageCircle, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { listMyPods, listMySkills, type MySkill } from "@/lib/api";
-import { Empty, Loading, PageHeader } from "@/components/app-ui";
+import { Empty, PageHeader, PageSkeleton, Section } from "@/components/app-ui";
+import { EmptyArtChat, EmptyArtPods } from "@/components/empty-art";
 import { toastApiError } from "@/lib/toast";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type MyPod = {
@@ -53,103 +47,93 @@ export default function CommunityHubPage() {
     })();
   }, [username]);
 
-  if (loading) return <Loading />;
+  if (loading) return <PageSkeleton variant="list" />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Community & audio"
         description="Jump into skill chat channels or open your pod for live rooms."
       />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader>
-            <CardTitle className="font-serif text-lg">Skill communities</CardTitle>
-            <CardDescription>
-              Channel chat and community audio for skills you joined.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {skills.length === 0 ? (
-              <Empty>
-                Join a skill first.{" "}
-                <Link href="/skills" className="text-primary hover:underline">
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Section title="Skill communities">
+          {skills.length === 0 ? (
+            <Empty
+              art={<EmptyArtChat />}
+              title="Join a skill first"
+              description="Community chat opens for skills you're enrolled in."
+              action={
+                <Link href="/skills" className={cn(buttonVariants())}>
                   Browse skills
                 </Link>
-              </Empty>
-            ) : (
-              <ul className="divide-y divide-border">
-                {skills.map((s) => (
-                  <li
-                    key={s.skill_slug}
-                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {skills.map((s) => (
+                <li key={s.skill_slug}>
+                  <Link
+                    href={`/community/${s.skill_slug}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
                   >
                     <div className="min-w-0">
                       <div className="font-medium">{s.skill_name}</div>
-                      <p className="text-xs text-muted-foreground">
-                        Chat · channels · audio rooms
+                      <p className="text-sm text-muted-foreground">
+                        Chat · channels · audio
                       </p>
                     </div>
-                    <Link
-                      href={`/community/${s.skill_slug}`}
-                      className={cn(buttonVariants({ size: "sm" }), "gap-1")}
-                    >
+                    <span className="inline-flex items-center gap-1 text-sm text-primary">
                       <MessageCircle className="size-3.5" />
-                      Open chat
+                      Open
                       <ArrowRight className="size-3.5" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
 
-        <Card className="rounded-xl ring-1 ring-foreground/10">
-          <CardHeader>
-            <CardTitle className="font-serif text-lg">Pod rooms</CardTitle>
-            <CardDescription>
-              Pod chat and LiveKit audio for your accountability groups.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {pods.length === 0 ? (
-              <Empty>
-                You&apos;re not in a pod yet.{" "}
-                <Link href="/pods" className="text-primary hover:underline">
+        <Section title="Pod rooms">
+          {pods.length === 0 ? (
+            <Empty
+              art={<EmptyArtPods />}
+              title="No pods yet"
+              description="Find an accountability group to unlock pod chat and audio."
+              action={
+                <Link href="/pods" className={cn(buttonVariants())}>
                   Find a pod
                 </Link>
-              </Empty>
-            ) : (
-              <ul className="divide-y divide-border">
-                {pods.map((p) => {
-                  const slug = p.pod_slug ?? p.slug ?? "";
-                  const name = p.pod_name ?? p.name ?? slug;
-                  return (
-                    <li
-                      key={slug}
-                      className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+              {pods.map((p) => {
+                const slug = p.pod_slug ?? p.slug ?? "";
+                const name = p.pod_name ?? p.name ?? slug;
+                return (
+                  <li key={slug}>
+                    <Link
+                      href={`/pods/${slug}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
                     >
                       <div className="min-w-0">
                         <div className="font-medium">{name}</div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           {p.skill_slug} · {p.status ?? "ACTIVE"}
                         </p>
                       </div>
-                      <Link
-                        href={`/pods/${slug}`}
-                        className={cn(buttonVariants({ size: "sm" }), "gap-1")}
-                      >
+                      <span className="inline-flex items-center gap-1 text-sm text-primary">
                         <Headphones className="size-3.5" />
-                        Chat & audio
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                        Open
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Section>
       </div>
     </div>
   );
