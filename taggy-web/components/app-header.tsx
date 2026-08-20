@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { BrandLogo } from "@/components/brand-logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -45,14 +46,11 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
-        <Link
-          href="/home"
-          className="mr-2 flex items-center gap-2 font-serif text-lg font-medium"
-        >
-          <span className="inline-flex size-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-            T
-          </span>
-          <span className="hidden sm:inline">Taggy</span>
+        <Link href="/home" className="mr-2 text-lg">
+          <BrandLogo
+            size={28}
+            wordmarkClassName="hidden text-lg sm:inline"
+          />
         </Link>
 
         <nav className="hidden flex-1 items-center gap-1 md:flex">

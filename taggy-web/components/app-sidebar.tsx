@@ -27,6 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ThemeModeSwitch } from "@/components/theme-mode-switch";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -110,12 +111,9 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/home"
         onClick={onNavigate}
-        className="flex shrink-0 items-center gap-2.5 px-1 font-serif text-lg font-medium"
+        className="flex shrink-0 px-1 text-lg"
       >
-        <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-          T
-        </span>
-        Taggy
+        <BrandLogo size={32} wordmarkClassName="text-lg" />
       </Link>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
@@ -198,8 +196,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="size-5" />
           </Button>
-          <Link href="/home" className="font-serif text-lg font-medium">
-            Taggy
+          <Link href="/home" className="text-lg">
+            <BrandLogo size={28} wordmarkClassName="text-lg" />
           </Link>
         </div>
 

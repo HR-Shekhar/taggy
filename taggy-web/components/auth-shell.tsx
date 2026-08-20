@@ -11,6 +11,7 @@ import { toastApiError, toastError } from "@/lib/toast";
 import { UnderlineField } from "@/components/underline-field";
 import { useAuth } from "@/lib/auth";
 import { register } from "@/lib/api";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
@@ -95,11 +96,8 @@ function AuthChrome({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-dvh flex-col overflow-x-clip bg-transparent lg:h-dvh lg:overflow-hidden">
       <header className="relative z-20 flex shrink-0 items-center justify-between px-5 py-3 sm:px-8">
-        <Link href="/" className="flex items-center gap-2 font-serif text-lg font-medium text-foreground">
-          <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-            T
-          </span>
-          Taggy
+        <Link href="/" className="text-lg text-foreground">
+          <BrandLogo size={32} wordmarkClassName="text-lg" />
         </Link>
         <ThemeToggle />
       </header>
