@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -22,7 +23,7 @@ const defaultListLimit int32 = 50
 
 type Generator interface {
 	Available() bool
-	GenerateRoadmap(ctx context.Context, skillName, description, rationale string) ([]openrouter.MilestoneDraft, error)
+	GenerateRoadmap(ctx context.Context, skillName, description, rationale, currentOutline string) ([]openrouter.MilestoneDraft, error)
 }
 
 type Notifier interface {
@@ -189,7 +190,31 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		rationale = req.Rationale.String
 	}
 
-	drafts, err := s.generator.GenerateRoadmap(ctx, skill.Name, desc, rationale)
+	currentOutline := ""
+	if active, aerr := s.repo.GetActiveVersion(ctx, skill.ID); aerr == nil {
+		if ms, merr := s.repo.ListMilestonesByVersion(ctx, active.ID); merr == nil && len(ms) > 0 {
+			var b strings.Builder
+			for _, m := range ms {
+				kind := m.Kind
+				if kind == "" {
+					kind = "TOPIC"
+				}
+				hours := 0
+				if m.EstimatedHours.Valid {
+					hours = int(m.EstimatedHours.Int32)
+				}
+				b.WriteString(fmt.Sprintf("- [%s] %s (%dh)", kind, m.Title, hours))
+				if m.Description.Valid && m.Description.String != "" {
+					b.WriteString(": ")
+					b.WriteString(m.Description.String)
+				}
+				b.WriteByte('\n')
+			}
+			currentOutline = b.String()
+		}
+	}
+
+	drafts, err := s.generator.GenerateRoadmap(ctx, skill.Name, desc, rationale, currentOutline)
 	if err != nil {
 		s.log.Warn().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Msg("roadmap edit ai generation failed")
 		note := "AI generation failed; please submit again"

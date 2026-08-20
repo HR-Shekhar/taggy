@@ -1,18 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Room, RoomEvent, Track } from "livekit-client";
+import { useEffect, useState } from "react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
-import {
-  apiErrorMessage,
-  endAudioRoom,
-  getAudioRoom,
-  joinAudioRoom,
-  leaveAudioRoom,
-} from "@/lib/api";
+import { useAudioRoom } from "@/components/audio-room-provider";
 import { ErrorBox, Loading } from "@/components/app-ui";
 import { ReportDialog } from "@/components/report-dialog";
-import { toastError } from "@/lib/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,23 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-type RoomInfo = {
-  id: string;
-  entity_id?: number;
-  title: string;
-  status: string;
-  host_username?: string;
-  pod_slug?: string | null;
-  livekit_room_name?: string;
-  max_participants?: number;
-};
-
-type Participant = {
-  username: string;
-  name?: string;
-  role?: string;
-};
-
 export function AudioRoomSession({
   roomId,
   autoJoin = false,
@@ -47,113 +22,43 @@ export function AudioRoomSession({
   roomId: string;
   autoJoin?: boolean;
 }) {
-  const [room, setRoom] = useState<RoomInfo | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [connected, setConnected] = useState(false);
-  const [micOn, setMicOn] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const {
+    room,
+    participants,
+    loadError,
+    loading,
+    connected,
+    micOn,
+    busy,
+    bindRoom,
+    connect,
+    leave,
+    endRoom,
+    toggleMic,
+    roomId: activeId,
+  } = useAudioRoom();
   const [reportOpen, setReportOpen] = useState(false);
-  const liveRef = useRef<Room | null>(null);
-  const audioRef = useRef<HTMLDivElement | null>(null);
-
-  async function refresh() {
-    const result = await getAudioRoom(roomId);
-    if (!result.ok) {
-      const message = apiErrorMessage(result);
-      setLoadError(message);
-      toastError(message);
-      setRoom(null);
-      return;
-    }
-    setLoadError(null);
-    if (!result.data?.room) {
-      setRoom(null);
-      setParticipants([]);
-      return;
-    }
-    setRoom(result.data.room);
-    setParticipants(result.data.participants ?? []);
-  }
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await refresh();
-      setLoading(false);
-    })();
-    return () => {
-      void liveRef.current?.disconnect();
-      liveRef.current = null;
-    };
-  }, [roomId]);
+    void bindRoom(roomId);
+  }, [roomId, bindRoom]);
 
   useEffect(() => {
-    if (autoJoin && room && room.status === "ACTIVE" && !connected) {
-      void connect();
+    if (
+      autoJoin &&
+      room &&
+      room.id === roomId &&
+      room.status === "ACTIVE" &&
+      !connected
+    ) {
+      void connect(roomId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoJoin, room?.id, room?.status]);
+  }, [autoJoin, room, roomId, connected, connect]);
 
-  async function connect() {
-    setBusy(true);
-    const result = await joinAudioRoom(roomId);
-    if (!result.ok || !result.data?.token || !result.data.livekit_url) {
-      setBusy(false);
-      toastError(apiErrorMessage(result));
-      return;
-    }
-    try {
-      await liveRef.current?.disconnect();
-      if (audioRef.current) audioRef.current.innerHTML = "";
-      const live = new Room();
-      liveRef.current = live;
-      live.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === Track.Kind.Audio && audioRef.current) {
-          const el = track.attach();
-          audioRef.current.appendChild(el);
-        }
-      });
-      live.on(RoomEvent.Disconnected, () => {
-        setConnected(false);
-      });
-      await live.connect(result.data.livekit_url, result.data.token);
-      await live.localParticipant.setMicrophoneEnabled(true);
-      setMicOn(true);
-      setConnected(true);
-      await refresh();
-    } catch (e) {
-      toastError(e instanceof Error ? e.message : "Failed to connect to LiveKit");
-      setConnected(false);
-    } finally {
-      setBusy(false);
-    }
+  if (loading && (!room || activeId !== roomId)) return <Loading />;
+  if (!room || room.id !== roomId) {
+    return <ErrorBox message={loadError ?? "Audio room not found"} />;
   }
-
-  async function disconnect(leave = true) {
-    setBusy(true);
-    await liveRef.current?.disconnect();
-    liveRef.current = null;
-    setConnected(false);
-    if (leave) {
-      const result = await leaveAudioRoom(roomId);
-      if (!result.ok) toastError(apiErrorMessage(result));
-    }
-    await refresh();
-    setBusy(false);
-  }
-
-  async function toggleMic() {
-    const live = liveRef.current;
-    if (!live) return;
-    const next = !micOn;
-    await live.localParticipant.setMicrophoneEnabled(next);
-    setMicOn(next);
-  }
-
-  if (loading) return <Loading />;
-  if (!room) return <ErrorBox message={loadError ?? "Audio room not found"} />;
 
   return (
     <div className="space-y-4">
@@ -185,20 +90,24 @@ export function AudioRoomSession({
             {!connected ? (
               <Button
                 disabled={busy || room.status !== "ACTIVE"}
-                onClick={() => void connect()}
+                onClick={() => void connect(roomId)}
               >
                 Join & talk
               </Button>
             ) : (
               <>
-                <Button variant="outline" disabled={busy} onClick={() => void toggleMic()}>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void toggleMic()}
+                >
                   {micOn ? <Mic className="size-4" /> : <MicOff className="size-4" />}
                   {micOn ? "Mute" : "Unmute"}
                 </Button>
                 <Button
                   variant="destructive"
                   disabled={busy}
-                  onClick={() => void disconnect(true)}
+                  onClick={() => void leave()}
                 >
                   <PhoneOff className="size-4" />
                   Leave
@@ -208,16 +117,7 @@ export function AudioRoomSession({
             <Button
               variant="outline"
               disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                const result = await endAudioRoom(roomId);
-                setBusy(false);
-                if (!result.ok) toastError(apiErrorMessage(result));
-                else {
-                  await disconnect(false);
-                  await refresh();
-                }
-              }}
+              onClick={() => void endRoom()}
             >
               End room
             </Button>
@@ -230,12 +130,9 @@ export function AudioRoomSession({
             </Button>
           </div>
 
-          <div
-            ref={audioRef}
-            className="min-h-8 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground"
-          >
+          <div className="min-h-8 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground">
             {connected
-              ? "Live audio connected — remote speakers appear here."
+              ? "Live audio connected — you can leave this page and stay in the call."
               : "Join to connect microphone and hear others."}
           </div>
 

@@ -198,7 +198,7 @@ export default function HomePage() {
       : { href: "/skills", label: "Browse skills" };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="home-main">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
           title={displayName ? `Welcome back, ${displayName}` : "Home"}

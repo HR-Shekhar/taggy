@@ -221,8 +221,12 @@ export default function MyRequestsPage() {
                     </div>
                     <CardDescription>
                       {req.status === "GENERATING"
-                        ? "AI is drafting milestones…"
-                        : `${draftCount} draft milestone${draftCount === 1 ? "" : "s"}`}{" "}
+                        ? "AI is reviewing and drafting your skill…"
+                        : req.status === "APPROVED"
+                          ? "Approved — skill is live in the catalog"
+                          : req.status === "REJECTED"
+                            ? "Not approved"
+                            : `${draftCount} draft milestone${draftCount === 1 ? "" : "s"}`}{" "}
                       · {new Date(req.created_at).toLocaleString()}
                     </CardDescription>
                   </CardHeader>

@@ -119,7 +119,7 @@ export default function SkillsPage() {
   if (loading) return <PageSkeleton variant="list" />;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="skills-page">
       <PageHeader
         title="Skills"
         description="Pick a skill, follow a versioned roadmap, and track milestones."

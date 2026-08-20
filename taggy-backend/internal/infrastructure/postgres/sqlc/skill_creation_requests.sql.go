@@ -60,6 +60,46 @@ func (q *Queries) ApproveSkillCreationRequest(ctx context.Context, arg ApproveSk
 	return i, err
 }
 
+const autoRejectGeneratingSkillCreationRequest = `-- name: AutoRejectGeneratingSkillCreationRequest :one
+UPDATE skill_creation_request
+SET status = 'REJECTED',
+    reviewed_by = NULL,
+    reviewed_at = NOW(),
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
+`
+
+type AutoRejectGeneratingSkillCreationRequestParams struct {
+	ID        int64
+	AdminNote pgtype.Text
+}
+
+func (q *Queries) AutoRejectGeneratingSkillCreationRequest(ctx context.Context, arg AutoRejectGeneratingSkillCreationRequestParams) (SkillCreationRequest, error) {
+	row := q.db.QueryRow(ctx, autoRejectGeneratingSkillCreationRequest, arg.ID, arg.AdminNote)
+	var i SkillCreationRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.RequesterID,
+		&i.Name,
+		&i.SlugCandidate,
+		&i.Description,
+		&i.Status,
+		&i.SimilarSkills,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedSkillID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const cancelSkillCreationRequest = `-- name: CancelSkillCreationRequest :one
 UPDATE skill_creation_request
 SET status = 'CANCELLED',

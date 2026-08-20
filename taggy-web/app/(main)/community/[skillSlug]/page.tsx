@@ -26,9 +26,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   chatRoomKeyChannel,
-  useChatSocket,
   type ChatSocketEvent,
 } from "@/lib/chat-socket";
+import { usePersistentChatSocket } from "@/components/chat-connection-provider";
 import type { ChatMessage } from "@/components/chat-panel";
 
 type Channel = { id?: number; slug: string; name: string; description?: string };
@@ -74,7 +74,7 @@ export default function CommunityPage() {
     }
   }
 
-  useChatSocket(
+  usePersistentChatSocket(
     channelSlug ? chatRoomKeyChannel(skillSlug, channelSlug) : null,
     applyChatEvent
   );

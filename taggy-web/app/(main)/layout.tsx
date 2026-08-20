@@ -4,6 +4,9 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-sidebar";
 import { Loading } from "@/components/app-ui";
+import { OnboardingProvider } from "@/components/onboarding-tour";
+import { AudioRoomProvider } from "@/components/audio-room-provider";
+import { ChatConnectionProvider } from "@/components/chat-connection-provider";
 import { useAuth } from "@/lib/auth";
 
 export default function MainLayout({
@@ -30,5 +33,13 @@ export default function MainLayout({
   }
   if (!isAuthenticated) return null;
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AudioRoomProvider>
+      <ChatConnectionProvider>
+        <OnboardingProvider>
+          <AppShell>{children}</AppShell>
+        </OnboardingProvider>
+      </ChatConnectionProvider>
+    </AudioRoomProvider>
+  );
 }

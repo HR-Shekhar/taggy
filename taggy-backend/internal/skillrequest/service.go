@@ -27,7 +27,8 @@ const (
 
 type Generator interface {
 	Available() bool
-	GenerateRoadmap(ctx context.Context, skillName, description, rationale string) ([]openrouter.MilestoneDraft, error)
+	EvaluateSkillRequest(ctx context.Context, name, description string) (openrouter.SkillRequestEvaluation, error)
+	GenerateRoadmap(ctx context.Context, skillName, description, rationale, currentOutline string) ([]openrouter.MilestoneDraft, error)
 }
 
 type Notifier interface {
@@ -202,7 +203,44 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 	if req.Description.Valid {
 		desc = req.Description.String
 	}
-	drafts, err := s.generator.GenerateRoadmap(ctx, req.Name, desc, "")
+
+	eval, err := s.generator.EvaluateSkillRequest(ctx, req.Name, desc)
+	if err != nil {
+		s.log.Warn().Err(err).Int64("id", id).Str("name", req.Name).Msg("skill request evaluation failed")
+		note := "AI review failed; please submit again"
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			note = "AI review timed out; please submit again"
+		}
+		if _, ferr := s.repo.FailGenerating(context.WithoutCancel(ctx), id, note); ferr != nil && !errors.Is(ferr, pgx.ErrNoRows) {
+			s.log.Error().Err(ferr).Int64("id", id).Msg("mark skill request failed after eval error")
+		}
+		if s.notifier != nil {
+			s.notifier.NotifySkillRequestFailed(context.WithoutCancel(ctx), req.RequesterID, req.Name, note)
+		}
+		return
+	}
+	if !eval.WorthConsidering {
+		reason := eval.Reason
+		if reason == "" {
+			reason = "This request does not look like a skill worth building a Taggy roadmap for."
+		}
+		updated, rerr := s.repo.AutoRejectGenerating(context.WithoutCancel(ctx), id, reason)
+		if rerr != nil && !errors.Is(rerr, pgx.ErrNoRows) {
+			s.log.Error().Err(rerr).Int64("id", id).Msg("auto-reject skill request failed")
+			return
+		}
+		if s.notifier != nil && rerr == nil {
+			s.notifier.NotifySkillRequestRejected(context.WithoutCancel(ctx), updated.RequesterID, updated.Name, reason)
+		}
+		s.log.Info().
+			Str("request_id", req.PublicID.String()).
+			Str("name", req.Name).
+			Str("reason", reason).
+			Msg("skill creation request auto-rejected")
+		return
+	}
+
+	drafts, err := s.generator.GenerateRoadmap(ctx, req.Name, desc, "", "")
 	if err != nil {
 		s.log.Warn().Err(err).Int64("id", id).Str("name", req.Name).Msg("skill request ai generation failed")
 		note := "AI generation failed; please submit again"
@@ -228,13 +266,18 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		return
 	}
 
-	if s.notifier != nil {
-		s.notifier.NotifySkillRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.Name)
+	if _, err := s.approvePending(context.WithoutCancel(ctx), updated, 0, "Auto-approved after AI review"); err != nil {
+		s.log.Error().Err(err).Int64("id", id).Msg("auto-approve skill request failed; left pending for admin")
+		if s.notifier != nil {
+			s.notifier.NotifySkillRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.Name)
+		}
+		return
 	}
+
 	s.log.Info().
 		Str("request_id", updated.PublicID.String()).
 		Int("milestones", len(drafts)).
-		Msg("skill creation draft ready for admin review")
+		Msg("skill creation request generated and auto-approved")
 }
 
 func (s *Service) ListMine(ctx context.Context, userPublicID uuid.UUID) ([]RequestView, error) {
@@ -302,6 +345,20 @@ func (s *Service) Approve(ctx context.Context, adminPublicID, requestPublicID uu
 		return RequestView{}, logging.Reject(s.log, ErrNotPending, "approve skill request rejected: not pending")
 	}
 
+	view, err := s.approvePending(ctx, req, admin.ID, "")
+	if err != nil {
+		return RequestView{}, err
+	}
+
+	s.log.Info().
+		Str("request_id", requestPublicID.String()).
+		Str("admin", admin.Username).
+		Msg("skill creation request approved")
+
+	return view, nil
+}
+
+func (s *Service) approvePending(ctx context.Context, req sqlc.SkillCreationRequest, reviewerID int64, adminNote string) (RequestView, error) {
 	var drafts []MilestoneDraft
 	if err := json.Unmarshal(req.DraftMilestones, &drafts); err != nil || len(drafts) == 0 {
 		return RequestView{}, logging.Reject(s.log, ErrAIFailed, "approve skill request rejected: invalid draft")
@@ -314,8 +371,14 @@ func (s *Service) Approve(ctx context.Context, adminPublicID, requestPublicID uu
 		return RequestView{}, logging.Unexpected(s.log, err, "approve skill request: slug check failed")
 	}
 
+	var notePtr *string
+	if strings.TrimSpace(adminNote) != "" {
+		n := strings.TrimSpace(adminNote)
+		notePtr = &n
+	}
+
 	var skillID int64
-	err = s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
+	err := s.repo.WithTx(ctx, func(q *sqlc.Queries) error {
 		skill, err := q.CreateSkill(ctx, sqlc.CreateSkillParams{
 			Name:        req.Name,
 			Slug:        slug,
@@ -398,11 +461,15 @@ func (s *Service) Approve(ctx context.Context, adminPublicID, requestPublicID uu
 			}
 		}
 
+		reviewedBy := pgtype.Int8{}
+		if reviewerID > 0 {
+			reviewedBy = pgtype.Int8{Int64: reviewerID, Valid: true}
+		}
 		_, err = q.ApproveSkillCreationRequest(ctx, sqlc.ApproveSkillCreationRequestParams{
 			ID:             req.ID,
-			ReviewedBy:     pgtype.Int8{Int64: admin.ID, Valid: true},
+			ReviewedBy:     reviewedBy,
 			CreatedSkillID: pgtype.Int8{Int64: skill.ID, Valid: true},
-			AdminNote:      pgtype.Text{},
+			AdminNote:      textPtr(notePtr),
 		})
 		return err
 	})
@@ -410,7 +477,7 @@ func (s *Service) Approve(ctx context.Context, adminPublicID, requestPublicID uu
 		return RequestView{}, logging.Unexpected(s.log, err, "approve skill request transaction failed")
 	}
 
-	updated, err := s.repo.GetByPublicID(ctx, requestPublicID)
+	updated, err := s.repo.GetByPublicID(ctx, req.PublicID)
 	if err != nil {
 		return RequestView{}, logging.Unexpected(s.log, err, "approve skill request reload failed")
 	}
@@ -418,12 +485,6 @@ func (s *Service) Approve(ctx context.Context, adminPublicID, requestPublicID uu
 	if s.notifier != nil {
 		s.notifier.NotifySkillRequestApproved(ctx, req.RequesterID, skillID, slug)
 	}
-
-	s.log.Info().
-		Str("request_id", requestPublicID.String()).
-		Str("admin", admin.Username).
-		Str("skill_slug", slug).
-		Msg("skill creation request approved")
 
 	return toView(updated), nil
 }

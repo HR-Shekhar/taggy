@@ -117,57 +117,113 @@ type chatResponse struct {
 	} `json:"usage"`
 }
 
-// compactRoadmap is the exact AI contract — names only, easy to store/edit later.
+// compactRoadmap is the AI contract: chapters with outcomes + timed subtopics.
 //
-//	{"topics":[{"name":"Supervised Learning","subtopics":["Linear Regression","KNN"]}]}
+//	{"topics":[{"name":"...","outcome":"...","subtopics":[{"name":"...","estimated_hours":2,"outcome":"..."}]}]}
 type compactRoadmap struct {
 	Topics []compactTopic `json:"topics"`
 }
 
 type compactTopic struct {
-	Name      string   `json:"name"`
-	Subtopics []string `json:"subtopics"`
+	Name      string            `json:"name"`
+	Outcome   string            `json:"outcome"`
+	Subtopics []compactSubtopic `json:"subtopics"`
 }
 
-// GenerateRoadmap asks for one compact JSON outline (topics → subtopic names),
-// then flattens into CHAPTER + TOPIC milestones for DB storage.
+type compactSubtopic struct {
+	Name           string `json:"name"`
+	EstimatedHours int    `json:"estimated_hours"`
+	Outcome        string `json:"outcome"`
+}
+
+// SkillRequestEvaluation is the AI gate for whether a skill request is worth building.
+type SkillRequestEvaluation struct {
+	WorthConsidering bool   `json:"worth_considering"`
+	Reason           string `json:"reason"`
+}
+
+// EvaluateSkillRequest judges whether a user skill request should be generated.
+func (c *Client) EvaluateSkillRequest(ctx context.Context, name, description string) (SkillRequestEvaluation, error) {
+	if !c.Available() {
+		return SkillRequestEvaluation{}, fmt.Errorf("ai api key not configured")
+	}
+	system := `You are Taggy's skill-request reviewer. Decide if a user request is worth turning into a full learning roadmap.
+Return ONLY one valid JSON object:
+{"worth_considering":true,"reason":"short plain reason"}
+
+Accept (worth_considering=true) when the ask is a real learnable skill or subject with clear curriculum potential (e.g. web development, Spanish, piano, data analysis, public speaking).
+
+Reject (worth_considering=false) when it is spam, nonsense, jokes, adult/illegal content, get-rich-quick scams, empty/vague one-word gibberish with no learning intent, or clearly not a skill people study on Taggy.
+
+Reason must be one short sentence the requester can read.`
+
+	user := fmt.Sprintf("Skill name: %s\n", strings.TrimSpace(name))
+	if d := strings.TrimSpace(description); d != "" {
+		user += "Description: " + d + "\n"
+	}
+	user += "Return the JSON decision only."
+
+	raw, err := c.chatJSON(ctx, system, user)
+	if err != nil {
+		return SkillRequestEvaluation{}, err
+	}
+	cleaned := repairJSON(raw)
+	var ev SkillRequestEvaluation
+	if err := json.Unmarshal([]byte(cleaned), &ev); err != nil {
+		return SkillRequestEvaluation{}, fmt.Errorf("parse evaluation json: %w", err)
+	}
+	ev.Reason = strings.TrimSpace(ev.Reason)
+	if ev.Reason == "" {
+		if ev.WorthConsidering {
+			ev.Reason = "Looks like a learnable skill with a clear curriculum path."
+		} else {
+			ev.Reason = "This request does not look like a skill worth building a Taggy roadmap for."
+		}
+	}
+	return ev, nil
+}
+
+// GenerateRoadmap asks for a followable syllabus (topics → timed subtopics + outcomes),
+// then flattens into CHAPTER + TOPIC milestones. currentOutline is optional context for edits.
 func (c *Client) GenerateRoadmap(
 	ctx context.Context,
-	skillName, description, rationale string,
+	skillName, description, rationale, currentOutline string,
 ) ([]MilestoneDraft, error) {
 	if !c.Available() {
 		return nil, fmt.Errorf("ai api key not configured")
 	}
 
 	start := time.Now()
-	system := `You are Taggy's curriculum architect. Design a friendly course for absolute beginners that still takes them to a solid, job-ready / competent level.
+	system := `You are Taggy's senior curriculum architect. Design a realistic, followable roadmap a motivated beginner can complete week by week — the quality bar of a great online course outline, not a keyword dump.
 Return ONLY one valid JSON object (strict JSON: no trailing commas, no comments, no markdown) matching:
-{"topics":[{"name":"Topic Name","subtopics":["Subtopic A","Subtopic B","Subtopic C"]}]}
+{"topics":[{"name":"Chapter name","outcome":"One sentence: what the learner can do after this chapter","subtopics":[{"name":"Lesson name","estimated_hours":2,"outcome":"One sentence lesson goal"}]}]}
 
-Audience & tone (critical):
-- Assume the learner starts at zero — no prior experience
-- Every topic/subtopic name must be plain, human language a beginner would understand on first read
-- Prefer friendly lesson titles like "What is HTML and how a webpage is built", "Make layouts with Flexbox", "Talk to APIs with fetch" — not jargon dumps like "SSR hydration", "monorepo DX", "CQRS", or unexplained acronyms
-- If a technical term is needed, pair it with plain words (e.g. "Git basics: save and share your code")
-- Order from easiest → harder; early topics build confidence; later topics deepen skill
-- No "expert-only" or interview-cram framing; teach step by step like a patient mentor
+Audience & tone:
+- Absolute beginner → competent / job-ready or practically skilled
+- Plain human language; pair jargon with everyday words when needed
+- Order easiest → harder; each chapter assumes only prior chapters
+- Ban vague titles alone: "Basics", "Advanced", "Overview", "Introduction", "Misc", "Deep dive"
 
-Coverage (names only — thorough but approachable):
-- Include 10–14 topics: foundations → core skills → practice projects → everyday tooling → polish / next level
-- Each topic: 5–8 concrete subtopics (real lessons a course would teach — not vague "Basics" / "Advanced")
-- Aim for a complete course path (roughly 70–110 named lessons including topic headers); do not stop early
-- End at a good level (build real projects, use modern tools) without skipping the beginner runway
-- Keep strings short; names only; no descriptions; no extra keys
+Structure (critical):
+- 10–14 chapters covering foundations → core skills → practice → tooling → polish
+- Each chapter: 5–8 concrete lessons (real study units someone can schedule)
+- Where natural, end a chapter with a small practice/project lesson
+- estimated_hours = realistic focused study hours per lesson, typically 1–6 (integer, never 0)
+- outcome strings are one short sentence each; keep names concise
+- Aim for a complete path (~70–110 lessons including chapter headers); do not stop early
 - Output must parse in a strict JSON parser`
 
 	user := fmt.Sprintf("Skill: %s\n", skillName)
 	if d := strings.TrimSpace(description); d != "" {
 		user += "Description: " + d + "\n"
 	}
+	if o := strings.TrimSpace(currentOutline); o != "" {
+		user += "Current roadmap outline to improve (preserve what still works; revise using the rationale):\n" + o + "\n"
+	}
 	if r := strings.TrimSpace(rationale); r != "" {
 		user += "Update rationale: " + r + "\n"
 	}
-	user += "Write a complete beginner-friendly syllabus from zero to a competent level. Cover the full course path with clear everyday wording in every name — do not stop at a partial outline.\n"
+	user += "Write a complete, followable beginner-friendly syllabus from zero to a competent level with realistic hours on every lesson.\n"
 	user += "Return the JSON outline only."
 
 	raw, err := c.chatJSON(ctx, system, user)
@@ -177,7 +233,7 @@ Coverage (names only — thorough but approachable):
 	outline, err := parseCompactRoadmap(raw)
 	if err != nil {
 		c.log.Warn().Err(err).Str("snippet", truncate(raw, 500)).Msg("ai compact roadmap parse failed; retrying")
-		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas.")
+		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Subtopics must be objects with name, estimated_hours, outcome.")
 		if err != nil {
 			return nil, err
 		}
@@ -372,7 +428,33 @@ func parseCompactRoadmap(raw string) (compactRoadmap, error) {
 	cleaned := repairJSON(raw)
 	var outline compactRoadmap
 	if err := json.Unmarshal([]byte(cleaned), &outline); err != nil {
-		return compactRoadmap{}, err
+		// Legacy shape: subtopics as string arrays — normalize via raw map.
+		var legacy struct {
+			Topics []struct {
+				Name      string          `json:"name"`
+				Outcome   string          `json:"outcome"`
+				Subtopics json.RawMessage `json:"subtopics"`
+			} `json:"topics"`
+		}
+		if err2 := json.Unmarshal([]byte(cleaned), &legacy); err2 != nil {
+			return compactRoadmap{}, err
+		}
+		outline.Topics = make([]compactTopic, 0, len(legacy.Topics))
+		for _, t := range legacy.Topics {
+			topic := compactTopic{Name: t.Name, Outcome: t.Outcome}
+			var objs []compactSubtopic
+			if json.Unmarshal(t.Subtopics, &objs) == nil && len(objs) > 0 {
+				topic.Subtopics = objs
+			} else {
+				var names []string
+				if json.Unmarshal(t.Subtopics, &names) == nil {
+					for _, n := range names {
+						topic.Subtopics = append(topic.Subtopics, compactSubtopic{Name: n, EstimatedHours: 2})
+					}
+				}
+			}
+			outline.Topics = append(outline.Topics, topic)
+		}
 	}
 	if len(outline.Topics) == 0 {
 		return compactRoadmap{}, fmt.Errorf("empty topics array")
@@ -388,6 +470,16 @@ func repairJSON(s string) string {
 		s = trailingCommaRE.ReplaceAllString(s, "$1")
 	}
 	return strings.TrimSpace(s)
+}
+
+func clampHours(h int) int {
+	if h < 1 {
+		return 1
+	}
+	if h > 40 {
+		return 40
+	}
+	return h
 }
 
 func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
@@ -408,12 +500,14 @@ func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 			continue
 		}
 
+		chapterIdx := len(out)
 		chapterSlug := uniqueSlug(slugify(name), "chapter", seenSlug)
+		chapterOutcome := strings.TrimSpace(t.Outcome)
 		out = append(out, MilestoneDraft{
 			Title:          name,
-			Description:    "",
-			EstimatedHours: 8,
-			OrderIndex:     len(out) + 1,
+			Description:    chapterOutcome,
+			EstimatedHours: 1, // replaced after summing subtopics
+			OrderIndex:     chapterIdx + 1,
 			Difficulty:     "INTERMEDIATE",
 			Slug:           chapterSlug,
 			Chapter:        name,
@@ -424,31 +518,42 @@ func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 		if len(subs) > maxSubtopicsPerTopic {
 			subs = subs[:maxSubtopicsPerTopic]
 		}
+		chapterHours := 0
 		addedSubs := 0
 		for _, rawSub := range subs {
 			if len(out) >= MaxMilestones {
 				break
 			}
-			sub := strings.TrimSpace(rawSub)
+			sub := strings.TrimSpace(rawSub.Name)
 			if sub == "" || strings.EqualFold(sub, name) {
 				continue
+			}
+			hours := clampHours(rawSub.EstimatedHours)
+			if rawSub.EstimatedHours <= 0 {
+				hours = 2
 			}
 			subSlug := uniqueSlug(slugify(sub), "topic", seenSlug)
 			out = append(out, MilestoneDraft{
 				Title:          sub,
-				Description:    "",
-				EstimatedHours: 12,
+				Description:    strings.TrimSpace(rawSub.Outcome),
+				EstimatedHours: hours,
 				OrderIndex:     len(out) + 1,
 				Difficulty:     "INTERMEDIATE",
 				Slug:           subSlug,
 				Chapter:        name,
 				Kind:           "TOPIC",
 			})
+			chapterHours += hours
 			addedSubs++
 			if addedSubs >= maxSubtopicsPerTopic {
 				break
 			}
 		}
+		if chapterHours < 1 {
+			chapterHours = 1
+		}
+		out[chapterIdx].EstimatedHours = chapterHours
+		// Re-number order indexes are already sequential via append.
 	}
 	return out
 }

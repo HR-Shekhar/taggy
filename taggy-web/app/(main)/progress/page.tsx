@@ -579,6 +579,11 @@ function ProgressInner() {
                           ) : null}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
+                          {chapter?.estimated_hours ? (
+                            <Badge variant="outline">
+                              {chapter.estimated_hours}h total
+                            </Badge>
+                          ) : null}
                           <Badge variant="outline">
                             {
                               group.topics.filter((t) => t.status === "COMPLETED")
@@ -628,9 +633,16 @@ function ProgressInner() {
                                       ) : null}
                                     </div>
                                   </div>
-                                  <Badge variant="outline" className="shrink-0">
-                                    {t.status.replaceAll("_", " ")}
-                                  </Badge>
+                                  <div className="flex shrink-0 flex-col items-end gap-1">
+                                    {t.estimated_hours ? (
+                                      <Badge variant="outline" className="text-[10px]">
+                                        {t.estimated_hours}h
+                                      </Badge>
+                                    ) : null}
+                                    <Badge variant="outline" className="shrink-0">
+                                      {t.status.replaceAll("_", " ")}
+                                    </Badge>
+                                  </div>
                                 </div>
                                 {t.status !== "COMPLETED" && username ? (
                                   <div className="mt-2 flex flex-wrap gap-2 pl-7">

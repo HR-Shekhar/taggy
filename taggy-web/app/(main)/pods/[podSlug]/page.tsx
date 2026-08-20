@@ -35,9 +35,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   chatRoomKeyPod,
-  useChatSocket,
   type ChatSocketEvent,
 } from "@/lib/chat-socket";
+import { usePersistentChatSocket } from "@/components/chat-connection-provider";
 import type { ChatMessage } from "@/components/chat-panel";
 
 type Member = {
@@ -102,7 +102,7 @@ export default function PodDetailPage() {
     }
   }
 
-  useChatSocket(
+  usePersistentChatSocket(
     isAcceptedMember(members, username) ? chatRoomKeyPod(podSlug) : null,
     applyChatEvent
   );
@@ -174,7 +174,7 @@ export default function PodDetailPage() {
   const from = `/pods/${podSlug}`;
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-1 flex-col" data-tour="pod-workspace">
       <ConfirmDialog
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
@@ -473,6 +473,6 @@ export default function PodDetailPage() {
           />
         }
       />
-    </>
+    </div>
   );
 }

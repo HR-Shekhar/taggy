@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useUnreadNotifications } from "@/lib/use-unread-notifications";
 
 const links = [
   { href: "/home", label: "Home", icon: Home },
@@ -38,6 +39,7 @@ export function AppHeader() {
   const { username, logout, isAuthenticated } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const { count: unread } = useUnreadNotifications();
 
   if (!isAuthenticated || !username) return null;
 
@@ -54,21 +56,37 @@ export function AppHeader() {
         </Link>
 
         <nav className="hidden flex-1 items-center gap-1 md:flex">
-          {links.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                pathname.startsWith(href)
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <Icon className="size-4" />
-              {label}
-            </Link>
-          ))}
+          {links.map(({ href, label, icon: Icon }) => {
+            const isNotifications = href === "/notifications";
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                  pathname.startsWith(href)
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <span className="relative">
+                  <Icon className="size-4" />
+                  {isNotifications && unread > 0 ? (
+                    <span
+                      aria-hidden
+                      className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-background"
+                    />
+                  ) : null}
+                </span>
+                {label}
+                {isNotifications && unread > 0 ? (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex items-center gap-2">

@@ -114,7 +114,7 @@ function PodsInner() {
   const alreadyInPodForSkill = Boolean(membershipForSkill);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="pods-page">
       <PageHeader
         title="Pods"
         description="Small accountability groups for the skill you're learning."

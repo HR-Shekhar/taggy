@@ -27,6 +27,11 @@ export const metadata: Metadata = {
   title: "Taggy: Gym buddies for skill growth",
   description:
     "Structured roadmaps, accountability pods, community chat, and progress tracking.",
+  icons: {
+    icon: [{ url: "/images/hero-icon.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/images/hero-icon.jpg", type: "image/jpeg" }],
+    shortcut: "/images/hero-icon.jpg",
+  },
 };
 
 export default function RootLayout({

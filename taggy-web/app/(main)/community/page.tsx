@@ -50,7 +50,7 @@ export default function CommunityHubPage() {
   if (loading) return <PageSkeleton variant="list" />;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="community-page">
       <PageHeader
         title="Community & audio"
         description="Jump into skill chat channels or open your pod for live rooms."

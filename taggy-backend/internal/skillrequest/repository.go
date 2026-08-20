@@ -87,6 +87,13 @@ func (r *Repository) FailGenerating(ctx context.Context, id int64, note string) 
 	})
 }
 
+func (r *Repository) AutoRejectGenerating(ctx context.Context, id int64, note string) (sqlc.SkillCreationRequest, error) {
+	return r.queries.AutoRejectGeneratingSkillCreationRequest(ctx, sqlc.AutoRejectGeneratingSkillCreationRequestParams{
+		ID:        id,
+		AdminNote: pgtype.Text{String: note, Valid: note != ""},
+	})
+}
+
 func (r *Repository) ListByRequester(ctx context.Context, requesterID int64, limit int32) ([]sqlc.SkillCreationRequest, error) {
 	return r.queries.ListSkillCreationRequestsByRequester(ctx, sqlc.ListSkillCreationRequestsByRequesterParams{
 		RequesterID: requesterID,
@@ -106,9 +113,13 @@ func (r *Repository) Cancel(ctx context.Context, publicID uuid.UUID, requesterID
 }
 
 func (r *Repository) Approve(ctx context.Context, id, reviewerID, skillID int64, note *string) (sqlc.SkillCreationRequest, error) {
+	reviewedBy := pgtype.Int8{}
+	if reviewerID > 0 {
+		reviewedBy = pgtype.Int8{Int64: reviewerID, Valid: true}
+	}
 	return r.queries.ApproveSkillCreationRequest(ctx, sqlc.ApproveSkillCreationRequestParams{
 		ID:             id,
-		ReviewedBy:     pgtype.Int8{Int64: reviewerID, Valid: true},
+		ReviewedBy:     reviewedBy,
 		CreatedSkillID: pgtype.Int8{Int64: skillID, Valid: true},
 		AdminNote:      textPtr(note),
 	})

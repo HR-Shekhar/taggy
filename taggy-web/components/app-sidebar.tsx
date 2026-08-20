@@ -28,17 +28,28 @@ import {
 } from "@/components/ui/sheet";
 import { ThemeModeSwitch } from "@/components/theme-mode-switch";
 import { BrandLogo } from "@/components/brand-logo";
+import { useUnreadNotifications } from "@/lib/use-unread-notifications";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/home", label: "Home", icon: Home },
-  { href: "/skills", label: "Skills", icon: BookOpen },
-  { href: "/progress", label: "Progress", icon: TrendingUp },
-  { href: "/pods", label: "Pods", icon: Users },
-  { href: "/community", label: "Community", icon: MessageCircle },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/requests", label: "My requests", icon: Inbox },
-  { href: "/upgrade", label: "Premium", icon: Sparkles },
+  { href: "/home", label: "Home", icon: Home, tour: "nav-home" },
+  { href: "/skills", label: "Skills", icon: BookOpen, tour: "nav-skills" },
+  { href: "/progress", label: "Progress", icon: TrendingUp, tour: "nav-progress" },
+  { href: "/pods", label: "Pods", icon: Users, tour: "nav-pods" },
+  {
+    href: "/community",
+    label: "Community",
+    icon: MessageCircle,
+    tour: "nav-community",
+  },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    icon: Bell,
+    tour: "nav-notifications",
+  },
+  { href: "/requests", label: "My requests", icon: Inbox, tour: "nav-requests" },
+  { href: "/upgrade", label: "Premium", icon: Sparkles, tour: "nav-premium" },
 ];
 
 function isChatSurface(pathname: string) {
@@ -62,24 +73,37 @@ function SidebarBackground() {
   );
 }
 
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = count > 9 ? "9+" : String(count);
+  return (
+    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-primary-foreground">
+      {label}
+    </span>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { isAdmin } = useAuth();
+  const { count: unread } = useUnreadNotifications();
   const nav = isAdmin
-    ? [...links, { href: "/admin", label: "Admin console", icon: Shield }]
+    ? [...links, { href: "/admin", label: "Admin console", icon: Shield, tour: "nav-admin" }]
     : links;
 
   return (
     <nav className="flex flex-col gap-0.5">
-      {nav.map(({ href, label, icon: Icon }) => {
+      {nav.map(({ href, label, icon: Icon, tour }) => {
         const active =
           pathname === href || (href !== "/home" && pathname.startsWith(href));
         const isAdminLink = href === "/admin";
         const isPremium = href === "/upgrade";
+        const isNotifications = href === "/notifications";
         return (
           <Link
             key={href}
             href={href}
+            data-tour={tour}
             onClick={onNavigate}
             className={cn(
               "inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -93,8 +117,17 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             )}
           >
-            <Icon className="size-4 shrink-0" />
-            {label}
+            <span className="relative shrink-0">
+              <Icon className="size-4" />
+              {isNotifications && unread > 0 ? (
+                <span
+                  aria-hidden
+                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-sidebar"
+                />
+              ) : null}
+            </span>
+            <span className="min-w-0 flex-1 truncate">{label}</span>
+            {isNotifications ? <UnreadBadge count={unread} /> : null}
           </Link>
         );
       })}
@@ -171,6 +204,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const chatSurface = isChatSurface(pathname);
+  const { count: unread } = useUnreadNotifications();
 
   return (
     <div
@@ -198,6 +232,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Button>
           <Link href="/home" className="text-lg">
             <BrandLogo size={28} wordmarkClassName="text-lg" />
+          </Link>
+          <Link
+            href="/notifications"
+            className="relative ml-auto inline-flex size-9 items-center justify-center rounded-md hover:bg-muted"
+            aria-label={
+              unread > 0
+                ? `Notifications, ${unread} unread`
+                : "Notifications"
+            }
+          >
+            <Bell className="size-5" />
+            {unread > 0 ? (
+              <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            ) : null}
           </Link>
         </div>
 

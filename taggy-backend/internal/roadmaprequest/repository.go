@@ -53,6 +53,10 @@ func (r *Repository) GetActiveVersion(ctx context.Context, skillID int64) (sqlc.
 	return r.queries.GetActiveCatalogRoadmapVersionBySkillID(ctx, skillID)
 }
 
+func (r *Repository) ListMilestonesByVersion(ctx context.Context, versionID int64) ([]sqlc.ListMilestonesByRoadmapVersionIDRow, error) {
+	return r.queries.ListMilestonesByRoadmapVersionID(ctx, pgtype.Int8{Int64: versionID, Valid: true})
+}
+
 func (r *Repository) GetMaxVersion(ctx context.Context, roadmapID int64) (int32, error) {
 	return r.queries.GetMaxRoadmapVersionNumber(ctx, pgtype.Int8{Int64: roadmapID, Valid: true})
 }

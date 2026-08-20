@@ -102,6 +102,18 @@ WHERE id = $1
 RETURNING *;
 
 
+-- name: AutoRejectGeneratingSkillCreationRequest :one
+UPDATE skill_creation_request
+SET status = 'REJECTED',
+    reviewed_by = NULL,
+    reviewed_at = NOW(),
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING *;
+
+
 -- name: GetPendingSkillCreationByRequesterAndName :one
 SELECT *
 FROM skill_creation_request

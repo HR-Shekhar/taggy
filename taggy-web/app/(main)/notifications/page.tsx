@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import { Empty, PageHeader, PageSkeleton } from "@/components/app-ui";
 import { toastApiError } from "@/lib/toast";
+import { notifyNotificationsChanged } from "@/lib/use-unread-notifications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -209,7 +210,7 @@ export default function NotificationsPage() {
       data.notifications ??
       (Array.isArray(result.data) ? (result.data as Notification[]) : []);
     setItems(list);
-    setUnreadCount(data.unread_count ?? 0);
+    setUnreadCount(data.unread_count ?? list.filter((n) => !n.is_read).length);
 
     const statuses = await resolveJoinRequestStatuses(list);
     setRequestStatus(statuses);
@@ -225,6 +226,8 @@ export default function NotificationsPage() {
     const r = await markNotificationRead(username, id);
     if (!r.ok && r.status !== 409) {
       toastApiError(r);
+    } else {
+      notifyNotificationsChanged();
     }
   }
 
@@ -269,7 +272,10 @@ export default function NotificationsPage() {
               if (!username) return;
               const r = await markAllNotificationsRead(username);
               if (!r.ok) toastApiError(r);
-              else void load();
+              else {
+                notifyNotificationsChanged();
+                void load();
+              }
             }}
           >
             Mark all read
