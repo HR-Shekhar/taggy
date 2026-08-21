@@ -27,7 +27,7 @@ type AIConfig struct {
 	// Preferred: NVIDIA NIM / generic
 	APIKey  string `env:"AI_API_KEY"`
 	NVIDIA  string `env:"NVIDIA_API_KEY"`
-	Model   string `env:"AI_MODEL" envDefault:"z-ai/glm-5.2"`
+	Model   string `env:"AI_MODEL" envDefault:"nvidia/nemotron-3-super-120b-a12b"`
 	BaseURL string `env:"AI_BASE_URL" envDefault:"https://integrate.api.nvidia.com/v1"`
 
 	// Legacy OpenRouter (still works if NVIDIA/AI key unset)
@@ -49,7 +49,7 @@ func (a AIConfig) Resolved() (apiKey, model, baseURL string, jsonMode bool) {
 		return apiKey, model, baseURL, jsonMode
 	}
 
-	model = firstNonEmpty(a.Model, "z-ai/glm-5.2")
+	model = firstNonEmpty(a.Model, "nvidia/nemotron-3-super-120b-a12b")
 	baseURL = firstNonEmpty(a.BaseURL, "https://integrate.api.nvidia.com/v1")
 	// NIM GLM typically does not support response_format=json_object.
 	return apiKey, model, baseURL, false

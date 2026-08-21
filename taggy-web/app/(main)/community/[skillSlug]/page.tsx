@@ -14,6 +14,7 @@ import {
   sendChannelMessage,
 } from "@/lib/api";
 import { Empty, Loading } from "@/components/app-ui";
+import { BackButton } from "@/components/back-button";
 import { CommunityLeaderboardPanel } from "@/components/community-leaderboard-panel";
 import { toastApiError } from "@/lib/toast";
 import { ReportDialog } from "@/components/report-dialog";
@@ -164,13 +165,16 @@ export default function CommunityPage() {
       leftLabel="Channels"
       header={
         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="truncate font-serif text-xl tracking-tight">
-              #{activeChannel?.name ?? channelSlug ?? "channel"}
-            </h1>
-            <p className="truncate text-xs text-foreground/75">
-              {skillSlug} community
-            </p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <BackButton fallbackHref="/community" variant="ghost" size="sm" />
+            <div className="min-w-0">
+              <h1 className="truncate font-serif text-xl tracking-tight">
+                #{activeChannel?.name ?? channelSlug ?? "channel"}
+              </h1>
+              <p className="truncate text-xs text-foreground/75">
+                {skillSlug} community
+              </p>
+            </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {/* Mobile channel switcher */}

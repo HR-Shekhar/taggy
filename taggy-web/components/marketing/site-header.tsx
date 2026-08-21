@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex items-center justify-between p-4 sm:p-5">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex items-center justify-between px-5 py-3 sm:px-6 sm:py-3.5">
       <Link href="/" className="pointer-events-auto text-xl">
         <BrandLogo size={32} wordmarkClassName="text-xl" />
       </Link>

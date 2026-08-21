@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   createContext,
   useCallback,
@@ -14,7 +13,6 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { Room, RoomEvent, Track } from "livekit-client";
-import { Mic, MicOff, PhoneOff, Radio } from "lucide-react";
 import {
   apiErrorMessage,
   endAudioRoom,
@@ -23,8 +21,7 @@ import {
   leaveAudioRoom,
 } from "@/lib/api";
 import { toastError } from "@/lib/toast";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { FloatingCallWindow } from "@/components/floating-call-window";
 
 type RoomInfo = {
   id: string;
@@ -278,53 +275,24 @@ export function AudioRoomProvider({ children }: { children: ReactNode }) {
 
   const onAudioPage =
     roomId != null && pathname.startsWith(`/audio-rooms/${roomId}`);
-  const showMini = connected && room && !onAudioPage;
+  const showFloat = connected && room != null && !onAudioPage;
 
   return (
     <AudioRoomContext.Provider value={value}>
       {children}
       {/* Persistent remote-audio sink (hidden when mini/session UIs remount). */}
       <div ref={audioElRef} className="sr-only" aria-hidden />
-      {showMini ? (
-        <div
-          className={cn(
-            "fixed bottom-4 right-4 z-50 flex max-w-sm items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-2 shadow-lg backdrop-blur-md"
-          )}
-        >
-          <Radio className="size-4 shrink-0 text-primary" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{room.title}</p>
-            <p className="truncate text-xs text-foreground/75">
-              Still in audio room
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label={micOn ? "Mute" : "Unmute"}
-            disabled={busy}
-            onClick={() => void toggleMic()}
-          >
-            {micOn ? <Mic className="size-4" /> : <MicOff className="size-4" />}
-          </Button>
-          <Link
-            href={`/audio-rooms/${roomId}`}
-            className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:underline"
-          >
-            Return
-          </Link>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            aria-label="Leave room"
-            disabled={busy}
-            onClick={() => void leave()}
-          >
-            <PhoneOff className="size-4 text-destructive" />
-          </Button>
-        </div>
+      {showFloat ? (
+        <FloatingCallWindow
+          title={room.title}
+          hostUsername={room.host_username}
+          micOn={micOn}
+          busy={busy}
+          onToggleMic={() => void toggleMic()}
+          onLeave={() => void leave()}
+          onEnd={() => void endRoom()}
+          returnHref={`/audio-rooms/${roomId}`}
+        />
       ) : null}
     </AudioRoomContext.Provider>
   );

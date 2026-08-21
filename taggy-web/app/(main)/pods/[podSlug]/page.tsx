@@ -21,6 +21,7 @@ import {
   setMemberRole,
 } from "@/lib/api";
 import { Empty, ErrorBox, Loading } from "@/components/app-ui";
+import { BackButton } from "@/components/back-button";
 import { PodQuizPanel } from "@/components/pod-quiz-panel";
 import { toastApiError } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -210,15 +211,18 @@ export default function PodDetailPage() {
         leftLabel="Members"
         header={
           <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="truncate font-serif text-xl tracking-tight">
-                {String(pod.name ?? podSlug)}
-              </h1>
-      <p className="truncate text-xs text-foreground/75">
-                {String(pod.skill_name ?? pod.skill_slug ?? "")}
-                {" · "}
-                @{String(pod.owner_username ?? "")}
-              </p>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <BackButton fallbackHref="/pods" variant="ghost" size="sm" />
+              <div className="min-w-0">
+                <h1 className="truncate font-serif text-xl tracking-tight">
+                  {String(pod.name ?? podSlug)}
+                </h1>
+                <p className="truncate text-xs text-foreground/75">
+                  {String(pod.skill_name ?? pod.skill_slug ?? "")}
+                  {" · "}
+                  @{String(pod.owner_username ?? "")}
+                </p>
+              </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Button

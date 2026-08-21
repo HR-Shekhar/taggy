@@ -26,6 +26,7 @@ export default function UpgradePage() {
       <PageHeader
         title="Taggy Premium"
         description="Follow more skills without hitting the free-plan limit."
+        backHref="/home"
       />
 
       <div className="grid gap-4 md:grid-cols-2">

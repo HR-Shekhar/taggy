@@ -92,18 +92,18 @@ function formatWhen(value?: string | null) {
 function StatusIcon({ status, size = "md" }: { status: string; size?: "sm" | "md" }) {
   const cls =
     size === "sm"
-      ? "relative z-10 size-5 shrink-0 bg-background"
-      : "relative z-10 size-8 shrink-0 bg-background";
+      ? "relative z-10 size-5 shrink-0 rounded-full bg-background"
+      : "relative z-10 size-8 shrink-0 rounded-full bg-background";
   if (status === "COMPLETED") {
     return <CheckCircle2 className={cn(cls, "text-primary")} />;
   }
   if (status === "POSTPONED") {
-    return <PauseCircle className={cn(cls, "text-muted-foreground")} />;
+    return <PauseCircle className={cn(cls, "text-foreground/50")} />;
   }
   if (status === "IN_PROGRESS") {
     return <Clock3 className={cn(cls, "text-primary")} />;
   }
-  return <Circle className={cn(cls, "text-muted-foreground")} />;
+  return <Circle className={cn(cls, "text-foreground/50")} />;
 }
 
 type ChapterGroup = {

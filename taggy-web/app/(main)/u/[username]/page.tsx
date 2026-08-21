@@ -17,6 +17,7 @@ import {
   ErrorBox,
   PageSkeleton,
 } from "@/components/app-ui";
+import { BackButton } from "@/components/back-button";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +124,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <BackButton fallbackHref="/home" />
       <Card className="gap-0 overflow-hidden rounded-2xl p-0">
         <div className="relative h-32 w-full sm:h-40">
           <Image

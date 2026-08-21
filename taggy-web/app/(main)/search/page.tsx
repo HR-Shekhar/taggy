@@ -59,6 +59,7 @@ function SearchInner() {
       <PageHeader
         title="Search"
         description="Find skills, people, and communities."
+        backHref="/home"
       />
 
       <form

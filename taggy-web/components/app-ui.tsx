@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyArtGeneric } from "@/components/empty-art";
+import { BackButton } from "@/components/back-button";
 import { CheckCircle2, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/toast";
@@ -318,26 +319,34 @@ export function PageHeader({
   title,
   description,
   children,
+  backHref,
 }: {
   title: string;
   description?: string;
   children?: ReactNode;
+  /** When set, shows a Back control above the title (fallback if no history/`?from=`). */
+  backHref?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0 space-y-1.5">
-        <h1 className="font-serif text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
-          {title}
-        </h1>
-        {description && (
-          <p className="max-w-xl text-sm leading-relaxed text-foreground/75 sm:text-base">
-            {description}
-          </p>
-        )}
+    <div className="mb-6 space-y-3">
+      {backHref ? <BackButton fallbackHref={backHref} /> : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <h1 className="font-serif text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
+            {title}
+          </h1>
+          {description && (
+            <p className="max-w-xl text-sm leading-relaxed text-foreground/75 sm:text-base">
+              {description}
+            </p>
+          )}
+        </div>
+        {children ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {children}
+          </div>
+        ) : null}
       </div>
-      {children ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>
-      ) : null}
     </div>
   );
 }

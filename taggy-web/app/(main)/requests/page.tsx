@@ -171,6 +171,7 @@ export default function MyRequestsPage() {
       <PageHeader
         title="My requests"
         description="Review AI-drafted roadmaps, then wait for admin approval — or discard and try again with more detail."
+        backHref="/skills"
       />
 
       <ConfirmDialog

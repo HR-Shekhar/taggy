@@ -66,6 +66,7 @@ export default function ReportsPage() {
       <PageHeader
         title="My reports"
         description="Reports you’ve filed. Admins resolve them offline."
+        backHref="/settings"
       />
       {items.length === 0 ? (
         <Empty>No reports yet.</Empty>

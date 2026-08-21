@@ -61,7 +61,7 @@ func NewWithOptions(apiKey, model, baseURL string, opts Options, log zerolog.Log
 		baseURL = "https://integrate.api.nvidia.com/v1"
 	}
 	if strings.TrimSpace(model) == "" {
-		model = "z-ai/glm-5.2"
+		model = "nvidia/nemotron-3-super-120b-a12b"
 	}
 	timeout := opts.Timeout
 	if timeout <= 0 {

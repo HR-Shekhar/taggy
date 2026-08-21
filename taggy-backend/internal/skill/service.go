@@ -332,16 +332,6 @@ func (s *Service) UpdateMilestone(
 			Str("kind", kind).
 			Msg("milestone completed")
 
-		if s.notifier != nil && progress.MilestoneID.Valid {
-			s.notifier.NotifyMilestoneCompleted(
-				ctx,
-				userSkill.UserID,
-				progress.MilestoneID.Int64,
-				skillSlug,
-				progress.Title,
-			)
-		}
-
 	case MilestoneActionPostpone:
 		if input.PostponedUntil == nil {
 			return sqlc.GetMilestoneProgressBySlugRow{}, logging.Reject(s.log, apperrors.ErrBadRequest, "postpone rejected: missing postponed_until")

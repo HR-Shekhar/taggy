@@ -197,7 +197,11 @@ export default function SkillDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={skillName} description={description ?? undefined}>
+      <PageHeader
+        title={skillName}
+        description={description ?? undefined}
+        backHref="/skills"
+      >
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/community/${slug}`}
@@ -510,16 +514,16 @@ export default function SkillDetailPage() {
 }
 
 function StatusIcon({ status }: { status: string }) {
+  const base =
+    "relative z-10 size-8 shrink-0 rounded-full bg-background";
   if (status === "COMPLETED") {
-    return <CheckCircle2 className="relative z-10 size-8 shrink-0 bg-background text-primary" />;
+    return <CheckCircle2 className={cn(base, "text-primary")} />;
   }
   if (status === "POSTPONED") {
-    return (
-      <PauseCircle className="relative z-10 size-8 shrink-0 bg-background text-foreground/50" />
-    );
+    return <PauseCircle className={cn(base, "text-foreground/50")} />;
   }
   if (status === "IN_PROGRESS") {
-    return <Clock3 className="relative z-10 size-8 shrink-0 bg-background text-primary" />;
+    return <Clock3 className={cn(base, "text-primary")} />;
   }
-  return <Circle className="relative z-10 size-8 shrink-0 bg-background text-foreground/50" />;
+  return <Circle className={cn(base, "text-foreground/50")} />;
 }

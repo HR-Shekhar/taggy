@@ -15,6 +15,7 @@ export default function SettingsPage() {
       <PageHeader
         title="Settings"
         description="Account, appearance, and shortcuts."
+        backHref="/home"
       />
 
       <Section title="Account" description={`Signed in as @${username}`}>

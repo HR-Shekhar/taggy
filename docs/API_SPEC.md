@@ -1184,7 +1184,7 @@ Omitted type keys mean that type was not requested. Empty arrays mean no matches
 
 ## Admin + AI catalog requests (Phase 7)
 
-Platform admins (`users.role = ADMIN`). Bootstrapped on API start from `ADMIN_USERNAMES` (comma-separated). Roadmap drafts via any OpenAI-compatible chat API — prefer NVIDIA NIM (`NVIDIA_API_KEY`, `AI_MODEL=z-ai/glm-5.2`, `AI_BASE_URL=https://integrate.api.nvidia.com/v1`). OpenRouter remains a fallback if only `OPENROUTER_API_KEY` is set.
+Platform admins (`users.role = ADMIN`). Bootstrapped on API start from `ADMIN_USERNAMES` (comma-separated). Roadmap drafts via any OpenAI-compatible chat API — prefer NVIDIA NIM (`NVIDIA_API_KEY`, `AI_MODEL=nvidia/nemotron-3-super-120b-a12b`, `AI_BASE_URL=https://integrate.api.nvidia.com/v1`). OpenRouter remains a fallback if only `OPENROUTER_API_KEY` is set.
 
 Login / refresh / profile (owner) include `is_admin`.
 

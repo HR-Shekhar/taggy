@@ -132,7 +132,7 @@ export function AudioRoomSession({
 
           <div className="min-h-8 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-foreground/75">
             {connected
-              ? "Live audio connected — you can leave this page and stay in the call."
+              ? "Live audio connected — leave this page and a floating call window follows you."
               : "Join to connect microphone and hear others."}
           </div>
 
