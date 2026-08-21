@@ -346,13 +346,12 @@ function Coachmark({
       {rect ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute rounded-xl ring-2 ring-primary/90 ring-offset-2 ring-offset-background"
+          className="pointer-events-none absolute rounded-xl ring-2 ring-primary/95 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] ring-offset-2 ring-offset-background dark:ring-[3px] dark:ring-primary dark:shadow-[0_0_0_9999px_rgba(0,0,0,0.78),0_0_0_4px_var(--primary),0_0_36px_10px_color-mix(in_oklab,var(--primary)_45%,transparent)] dark:ring-offset-0"
           style={{
             top: rect.top - pad,
             left: rect.left - pad,
             width: rect.width + pad * 2,
             height: rect.height + pad * 2,
-            boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.14)",
           }}
         />
       ) : null}
