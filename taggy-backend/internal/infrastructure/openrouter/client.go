@@ -69,7 +69,7 @@ func NewWithOptions(apiKey, model, baseURL string, opts Options, log zerolog.Log
 	}
 	maxTokens := opts.MaxTokens
 	if maxTokens <= 0 {
-		maxTokens = 8192
+		maxTokens = 16384
 	}
 	return &Client{
 		apiKey:    strings.TrimSpace(apiKey),
@@ -107,7 +107,8 @@ type respFormat struct {
 
 type chatResponse struct {
 	Choices []struct {
-		Message struct {
+		FinishReason string `json:"finish_reason"`
+		Message      struct {
 			Content string `json:"content"`
 		} `json:"message"`
 	} `json:"choices"`
@@ -289,12 +290,12 @@ Difficulty (required on every chapter and lesson — must vary across the course
 - Do NOT label everything INTERMEDIATE — spread levels honestly along the path
 
 Structure (critical):
-- 10–14 chapters covering foundations → core skills → practice → tooling → polish
-- Each chapter: 5–8 concrete lessons (real study units someone can schedule)
+- 8–12 chapters covering foundations → core skills → practice → tooling → polish
+- Each chapter: 4–6 concrete lessons (real study units someone can schedule)
 - Where natural, end a chapter with a small practice/project lesson
 - estimated_hours = realistic focused study hours per lesson, typically 1–6 (integer, never 0)
 - outcome strings are one short sentence each; keep names concise
-- Aim for a complete path (~70–110 lessons including chapter headers); do not stop early
+- Prefer a complete JSON document over a longer truncated one. Every string, array, and object MUST be closed.
 - Output must parse in a strict JSON parser`
 
 	user := fmt.Sprintf("Skill: %s\n", skillName)
@@ -336,7 +337,7 @@ Structure (critical):
 			Str("skill", skillName).
 			Str("snippet", truncate(raw, 500)).
 			Msg("ai compact roadmap parse failed; retrying")
-		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Subtopics must be objects with name, estimated_hours, outcome, difficulty (BEGINNER|INTERMEDIATE|ADVANCED).")
+		raw, err = c.chatJSON(ctx, system, user+"\nImportant: return COMPLETE strict JSON only — no trailing commas, no markdown, every brace/string closed. Use exactly 8 chapters with 5 lessons each so the payload is not truncated. Subtopics must be objects with name, estimated_hours, outcome, difficulty (BEGINNER|INTERMEDIATE|ADVANCED).")
 		if err != nil {
 			c.log.Error().
 				Err(err).
@@ -612,12 +613,151 @@ func parseCompactRoadmap(raw string) (compactRoadmap, error) {
 
 func repairJSON(s string) string {
 	s = extractJSONObject(s)
+	s = closeIncompleteJSON(s)
 	prev := ""
 	for s != prev {
 		prev = s
 		s = trailingCommaRE.ReplaceAllString(s, "$1")
 	}
 	return strings.TrimSpace(s)
+}
+
+func closeIncompleteJSON(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+
+	inString := false
+	escaped := false
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if !inString {
+			if ch == '"' {
+				inString = true
+			}
+			continue
+		}
+		if escaped {
+			escaped = false
+			continue
+		}
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+		if ch == '"' {
+			inString = false
+		}
+	}
+	if inString {
+		if escaped {
+			s = strings.TrimSuffix(s, `\`)
+		}
+		s += `"`
+	}
+
+	s = dropDanglingJSONSuffix(s)
+
+	stack := make([]byte, 0, 8)
+	inString = false
+	escaped = false
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch ch {
+		case '"':
+			inString = true
+		case '{', '[':
+			stack = append(stack, ch)
+		case '}':
+			if n := len(stack); n > 0 && stack[n-1] == '{' {
+				stack = stack[:n-1]
+			}
+		case ']':
+			if n := len(stack); n > 0 && stack[n-1] == '[' {
+				stack = stack[:n-1]
+			}
+		}
+	}
+	for i := len(stack) - 1; i >= 0; i-- {
+		if stack[i] == '{' {
+			s += "}"
+		} else {
+			s += "]"
+		}
+	}
+	return s
+}
+
+func dropDanglingJSONSuffix(s string) string {
+	for {
+		s = strings.TrimRight(s, " \n\r\t")
+		if strings.HasSuffix(s, ",") {
+			s = strings.TrimSuffix(s, ",")
+			continue
+		}
+		if strings.HasSuffix(s, ":") {
+			s = strings.TrimSuffix(s, ":")
+			s = strings.TrimRight(s, " \n\r\t")
+			if q0, q1, ok := lastQuotedRange(s); ok {
+				s = strings.TrimRight(s[:q0], " \n\r\t,")
+				_ = q1
+			}
+			continue
+		}
+		if strings.HasSuffix(s, `"`) {
+			q0, q1, ok := lastQuotedRange(s)
+			if !ok {
+				break
+			}
+			before := strings.TrimRight(s[:q0], " \n\r\t")
+			if strings.HasSuffix(before, ":") {
+				break
+			}
+			if strings.HasSuffix(before, ",") || strings.HasSuffix(before, "{") || strings.HasSuffix(before, "[") {
+				s = strings.TrimRight(s[:q0], " \n\r\t,")
+				_ = q1
+				continue
+			}
+		}
+		break
+	}
+	return s
+}
+
+func lastQuotedRange(s string) (start, end int, ok bool) {
+	end = strings.LastIndex(s, `"`)
+	if end < 0 {
+		return 0, 0, false
+	}
+	i := end - 1
+	for i >= 0 {
+		if s[i] == '"' {
+			escapes := 0
+			for j := i - 1; j >= 0 && s[j] == '\\'; j-- {
+				escapes++
+			}
+			if escapes%2 == 0 {
+				return i, end, true
+			}
+		}
+		i--
+	}
+	return 0, 0, false
 }
 
 func clampHours(h int) int {
@@ -940,7 +1080,20 @@ func (c *Client) chatJSONOnce(ctx context.Context, system, user string) (string,
 			Msg("ai chat empty response")
 		return "", fmt.Errorf("ai provider empty response")
 	}
-	return extractJSONObject(parsed.Choices[0].Message.Content), nil
+	choice := parsed.Choices[0]
+	completionTokens := 0
+	if parsed.Usage != nil {
+		completionTokens = parsed.Usage.CompletionTokens
+	}
+	if strings.EqualFold(choice.FinishReason, "length") {
+		c.log.Warn().
+			Str("model", c.model).
+			Str("finish_reason", choice.FinishReason).
+			Int("completion_tokens", completionTokens).
+			Int("max_tokens", c.maxTokens).
+			Msg("ai chat truncated at max_tokens")
+	}
+	return extractJSONObject(choice.Message.Content), nil
 }
 
 func extractJSONObject(s string) string {
@@ -952,11 +1105,12 @@ func extractJSONObject(s string) string {
 	s = strings.TrimSpace(s)
 
 	start := strings.Index(s, "{")
-	end := strings.LastIndex(s, "}")
-	if start >= 0 && end > start {
-		return s[start : end+1]
+	if start < 0 {
+		return s
 	}
-	return s
+	// Keep a truncated tail (no final '}'). closeIncompleteJSON closes it.
+	// Do not crop at the last inner '}' — that drops the unfinished last topic.
+	return s[start:]
 }
 
 func slugify(s string) string {

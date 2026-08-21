@@ -10,9 +10,14 @@ import (
 )
 
 func New(environment, logLevel string) (zerolog.Logger, error) {
-	level, err := zerolog.ParseLevel(strings.ToLower(logLevel))
+	level, err := zerolog.ParseLevel(strings.ToLower(strings.TrimSpace(logLevel)))
 	if err != nil {
 		return zerolog.Logger{}, fmt.Errorf("invalid log level %q: %w", logLevel, err)
+	}
+
+	// Production: warn and error only. Ignore more verbose LOG_LEVEL values.
+	if strings.EqualFold(environment, "production") && level < zerolog.WarnLevel {
+		level = zerolog.WarnLevel
 	}
 
 	var logger zerolog.Logger

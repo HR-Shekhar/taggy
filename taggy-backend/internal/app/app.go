@@ -135,7 +135,7 @@ func New() (*App, error) {
 
 	apiKey, model, baseURL, jsonMode := cfg.AI.Resolved()
 	aiClient := openrouter.NewWithOptions(apiKey, model, baseURL, openrouter.Options{
-		MaxTokens: 8192,
+		MaxTokens: 16384,
 		JSONMode:  jsonMode,
 		// Per-attempt HTTP timeout; pool job timeout (15m) bounds total retries.
 		Timeout: 10 * time.Minute,
