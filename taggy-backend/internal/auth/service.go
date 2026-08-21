@@ -60,65 +60,82 @@ func NewService(
 	}
 }
 
-func (s *Service) Register(ctx context.Context, input RegisterInput) (sqlc.User, string, error) {
+func (s *Service) Register(ctx context.Context, input RegisterInput) (PendingSignup, string, error) {
+	if err := s.repo.DeleteExpiredPendingRegistrations(ctx); err != nil {
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register expired pending cleanup failed")
+	}
+
 	emailExists, err := s.repo.EmailExists(ctx, input.Email)
 	if err != nil {
-		return sqlc.User{}, "", logging.Unexpected(s.log, err, "register email check failed")
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register email check failed")
 	}
 	if emailExists {
 		s.log.Warn().Str("email", input.Email).Msg("register rejected: email in use")
-		return sqlc.User{}, "", ErrEmailInUse
+		return PendingSignup{}, "", ErrEmailInUse
 	}
 
 	usernameExists, err := s.repo.UsernameExists(ctx, input.Username)
 	if err != nil {
-		return sqlc.User{}, "", logging.Unexpected(s.log, err, "register username check failed")
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register username check failed")
 	}
 	if usernameExists {
 		s.log.Warn().Str("username", input.Username).Msg("register rejected: username in use")
-		return sqlc.User{}, "", ErrUsernameInUse
+		return PendingSignup{}, "", ErrUsernameInUse
+	}
+
+	taken, err := s.repo.GetActivePendingRegistrationByUsername(ctx, input.Username)
+	if err == nil && !strings.EqualFold(taken.Email, input.Email) {
+		s.log.Warn().Str("username", input.Username).Msg("register rejected: username pending")
+		return PendingSignup{}, "", ErrUsernameInUse
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register pending username check failed")
 	}
 
 	passwordHash, err := s.passwords.Hash(input.Password)
 	if err != nil {
-		return sqlc.User{}, "", logging.Unexpected(s.log, err, "register password hash failed")
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register password hash failed")
 	}
 
 	code, err := s.otp.Generate()
 	if err != nil {
-		return sqlc.User{}, "", logging.Unexpected(s.log, err, "register otp generate failed")
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register otp generate failed")
 	}
 
 	expiresAt := time.Now().Add(s.otpTTL)
-	user, err := s.repo.CreateUserWithLocalIdentityAndOTP(ctx, sqlc.CreateUserParams{
-		Email:             input.Email,
-		Username:          input.Username,
-		Name:              input.Name,
-		Subscription:      sqlc.SubscriptionTierFREE,
-		EmailVerified:     false,
-		ProfilePictureUrl: pgtype.Text{},
-		Bio:               pgtype.Text{},
-	}, passwordHash, code.Hash, expiresAt)
+	pending, err := s.repo.UpsertPendingRegistration(
+		ctx,
+		input.Email,
+		input.Username,
+		input.Name,
+		passwordHash,
+		code.Hash,
+		expiresAt,
+	)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return sqlc.User{}, "", logging.Reject(s.log, apperrors.ErrConflict, "register rejected: conflict")
+			return PendingSignup{}, "", logging.Reject(s.log, apperrors.ErrConflict, "register rejected: conflict")
 		}
-		return sqlc.User{}, "", logging.Unexpected(s.log, err, "register create user failed")
+		return PendingSignup{}, "", logging.Unexpected(s.log, err, "register pending upsert failed")
 	}
 
 	s.log.Info().
-		Str("user_id", user.PublicID.String()).
-		Msg("user registered")
+		Str("email", pending.Email).
+		Str("username", pending.Username).
+		Msg("pending registration stored; waiting for otp")
 
-	if err := s.mailer.SendVerificationOTP(ctx, user.Email, code.PlainText); err != nil {
-		// Account exists; client can call resend-verification. Log loudly so ops see Resend misconfig.
+	if err := s.mailer.SendVerificationOTP(ctx, pending.Email, code.PlainText); err != nil {
 		s.log.Error().
-			Str("user_id", user.PublicID.String()).
+			Str("email", pending.Email).
 			Err(err).
 			Msg("verification email failed after register; user can resend")
 	}
 
-	return user, code.PlainText, nil
+	return PendingSignup{
+		Email:    pending.Email,
+		Username: pending.Username,
+		Name:     pending.Name,
+	}, code.PlainText, nil
 }
 
 func (s *Service) Login(ctx context.Context, input LoginInput) (TokenPair, error) {

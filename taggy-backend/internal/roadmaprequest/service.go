@@ -176,6 +176,12 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		return
 	}
 
+	s.log.Info().
+		Int64("id", id).
+		Str("request_id", req.PublicID.String()).
+		Str("skill", req.SkillSlug).
+		Msg("roadmap edit ai generation started")
+
 	skill, err := s.repo.GetSkillBySlug(ctx, req.SkillSlug)
 	if err != nil {
 		s.log.Error().Err(err).Int64("id", id).Msg("roadmap request generate: skill lookup failed")
@@ -194,7 +200,7 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 
 	eval, err := s.generator.EvaluateRoadmapEdit(ctx, skill.Name, desc, rationale)
 	if err != nil {
-		s.log.Warn().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Msg("roadmap edit evaluation failed")
+		s.log.Error().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Str("request_id", req.PublicID.String()).Msg("roadmap edit evaluation failed")
 		note := "AI review failed; please submit again"
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			note = "AI review timed out; please submit again"
@@ -250,7 +256,7 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 
 	drafts, err := s.generator.GenerateRoadmap(ctx, skill.Name, desc, rationale, currentOutline)
 	if err != nil {
-		s.log.Warn().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Msg("roadmap edit ai generation failed")
+		s.log.Error().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Str("request_id", req.PublicID.String()).Msg("roadmap edit ai generation failed")
 		note := "AI generation failed; please submit again"
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			note = "AI generation timed out; please submit again"

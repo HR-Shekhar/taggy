@@ -15,10 +15,38 @@ import (
 )
 
 func (s *Service) VerifyEmail(ctx context.Context, email, otp string) (sqlc.User, error) {
+	if err := s.repo.DeleteExpiredPendingRegistrations(ctx); err != nil {
+		return sqlc.User{}, logging.Unexpected(s.log, err, "verify email expired pending cleanup failed")
+	}
+
+	pending, err := s.repo.GetActivePendingRegistrationByEmail(ctx, email)
+	if err == nil {
+		if s.otp.Hash(otp) != pending.OtpHash {
+			s.log.Warn().Str("email", email).Msg("email verification rejected: invalid otp")
+			return sqlc.User{}, ErrInvalidOTP
+		}
+
+		user, err := s.repo.PromotePendingRegistration(ctx, pending)
+		if err != nil {
+			if isUniqueViolation(err) {
+				return sqlc.User{}, logging.Reject(s.log, apperrors.ErrConflict, "verify email rejected: conflict")
+			}
+			return sqlc.User{}, logging.Unexpected(s.log, err, "verify email promote pending failed")
+		}
+
+		s.log.Info().
+			Str("user_id", user.PublicID.String()).
+			Msg("email verified; user created")
+		return user, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return sqlc.User{}, logging.Unexpected(s.log, err, "verify email pending lookup failed")
+	}
+
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return sqlc.User{}, logging.Reject(s.log, apperrors.ErrNotFound, "verify email rejected: user not found")
+			return sqlc.User{}, logging.Reject(s.log, ErrOTPExpired, "verify email rejected: otp expired")
 		}
 		return sqlc.User{}, logging.Unexpected(s.log, err, "verify email user lookup failed")
 	}
@@ -53,6 +81,27 @@ func (s *Service) VerifyEmail(ctx context.Context, email, otp string) (sqlc.User
 }
 
 func (s *Service) ResendVerification(ctx context.Context, email string) (string, error) {
+	pending, err := s.repo.GetPendingRegistrationByEmail(ctx, email)
+	if err == nil {
+		code, err := s.otp.Generate()
+		if err != nil {
+			return "", logging.Unexpected(s.log, err, "resend pending otp generate failed")
+		}
+		expiresAt := time.Now().Add(s.otpTTL)
+		if _, err := s.repo.UpdatePendingRegistrationOTP(ctx, pending.Email, code.Hash, expiresAt); err != nil {
+			return "", logging.Unexpected(s.log, err, "resend pending otp store failed")
+		}
+		if err := s.mailer.SendVerificationOTP(ctx, pending.Email, code.PlainText); err != nil {
+			s.log.Error().Str("email", pending.Email).Err(err).Msg("verification email failed")
+			return "", logging.Reject(s.log, ErrEmailDeliveryFailed, "verification email delivery failed")
+		}
+		s.log.Info().Str("email", pending.Email).Msg("pending verification otp resent")
+		return code.PlainText, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", logging.Unexpected(s.log, err, "resend verification pending lookup failed")
+	}
+
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

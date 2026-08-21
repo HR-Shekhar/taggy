@@ -18,6 +18,13 @@ type RegisterInput struct {
 	Password string
 }
 
+// PendingSignup is returned after register. No users row exists until OTP succeeds.
+type PendingSignup struct {
+	Email    string
+	Username string
+	Name     string
+}
+
 // LoginInput is the service-layer input for email/password authentication.
 // UserAgent and IPAddress are optional metadata stored on the session row.
 type LoginInput struct {

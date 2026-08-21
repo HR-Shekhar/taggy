@@ -153,6 +153,7 @@ type RoadmapEditEvaluation struct {
 // EvaluateSkillRequest judges whether a user skill request should be generated.
 func (c *Client) EvaluateSkillRequest(ctx context.Context, name, description string) (SkillRequestEvaluation, error) {
 	if !c.Available() {
+		c.log.Error().Str("op", "evaluate_skill").Str("name", strings.TrimSpace(name)).Msg("ai skill evaluation skipped: api key not configured")
 		return SkillRequestEvaluation{}, fmt.Errorf("ai api key not configured")
 	}
 	system := `You are Taggy's skill-request reviewer. Decide if a user request is worth turning into a full learning roadmap.
@@ -173,11 +174,23 @@ Reason must be one short sentence the requester can read.`
 
 	raw, err := c.chatJSON(ctx, system, user)
 	if err != nil {
+		c.log.Error().
+			Err(err).
+			Str("op", "evaluate_skill").
+			Str("name", strings.TrimSpace(name)).
+			Str("model", c.model).
+			Msg("ai skill evaluation failed")
 		return SkillRequestEvaluation{}, err
 	}
 	cleaned := repairJSON(raw)
 	var ev SkillRequestEvaluation
 	if err := json.Unmarshal([]byte(cleaned), &ev); err != nil {
+		c.log.Error().
+			Err(err).
+			Str("op", "evaluate_skill").
+			Str("name", strings.TrimSpace(name)).
+			Str("snippet", truncate(raw, 500)).
+			Msg("ai skill evaluation parse failed")
 		return SkillRequestEvaluation{}, fmt.Errorf("parse evaluation json: %w", err)
 	}
 	ev.Reason = strings.TrimSpace(ev.Reason)
@@ -194,6 +207,7 @@ Reason must be one short sentence the requester can read.`
 // EvaluateRoadmapEdit judges whether a user's edit rationale is relevant and worth applying.
 func (c *Client) EvaluateRoadmapEdit(ctx context.Context, skillName, description, rationale string) (RoadmapEditEvaluation, error) {
 	if !c.Available() {
+		c.log.Error().Str("op", "evaluate_roadmap_edit").Str("skill", strings.TrimSpace(skillName)).Msg("ai roadmap edit evaluation skipped: api key not configured")
 		return RoadmapEditEvaluation{}, fmt.Errorf("ai api key not configured")
 	}
 	system := `You are Taggy's roadmap-edit reviewer. Decide if a user's suggested change is worth generating a new syllabus draft for admin review.
@@ -215,11 +229,23 @@ Reason must be one short sentence the requester (and admin) can read.`
 
 	raw, err := c.chatJSON(ctx, system, user)
 	if err != nil {
+		c.log.Error().
+			Err(err).
+			Str("op", "evaluate_roadmap_edit").
+			Str("skill", strings.TrimSpace(skillName)).
+			Str("model", c.model).
+			Msg("ai roadmap edit evaluation failed")
 		return RoadmapEditEvaluation{}, err
 	}
 	cleaned := repairJSON(raw)
 	var ev RoadmapEditEvaluation
 	if err := json.Unmarshal([]byte(cleaned), &ev); err != nil {
+		c.log.Error().
+			Err(err).
+			Str("op", "evaluate_roadmap_edit").
+			Str("skill", strings.TrimSpace(skillName)).
+			Str("snippet", truncate(raw, 500)).
+			Msg("ai roadmap edit evaluation parse failed")
 		return RoadmapEditEvaluation{}, fmt.Errorf("parse edit evaluation json: %w", err)
 	}
 	ev.Reason = strings.TrimSpace(ev.Reason)
@@ -240,6 +266,7 @@ func (c *Client) GenerateRoadmap(
 	skillName, description, rationale, currentOutline string,
 ) ([]MilestoneDraft, error) {
 	if !c.Available() {
+		c.log.Error().Str("op", "generate_roadmap").Str("skill", skillName).Msg("ai roadmap generation skipped: api key not configured")
 		return nil, fmt.Errorf("ai api key not configured")
 	}
 
@@ -283,27 +310,66 @@ Structure (critical):
 	user += "Write a complete, followable beginner-friendly syllabus from zero to a competent level with realistic hours on every lesson.\n"
 	user += "Return the JSON outline only."
 
+	isEdit := strings.TrimSpace(rationale) != "" || strings.TrimSpace(currentOutline) != ""
+	op := "generate_roadmap"
+	if isEdit {
+		op = "generate_roadmap_edit"
+	}
+
 	raw, err := c.chatJSON(ctx, system, user)
 	if err != nil {
+		c.log.Error().
+			Err(err).
+			Str("op", op).
+			Str("skill", skillName).
+			Str("model", c.model).
+			Str("base_url", c.baseURL).
+			Dur("latency", time.Since(start)).
+			Msg("ai roadmap generation request failed")
 		return nil, err
 	}
 	outline, err := parseCompactRoadmap(raw)
 	if err != nil {
-		c.log.Warn().Err(err).Str("snippet", truncate(raw, 500)).Msg("ai compact roadmap parse failed; retrying")
+		c.log.Warn().
+			Err(err).
+			Str("op", op).
+			Str("skill", skillName).
+			Str("snippet", truncate(raw, 500)).
+			Msg("ai compact roadmap parse failed; retrying")
 		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Subtopics must be objects with name, estimated_hours, outcome, difficulty (BEGINNER|INTERMEDIATE|ADVANCED).")
 		if err != nil {
+			c.log.Error().
+				Err(err).
+				Str("op", op).
+				Str("skill", skillName).
+				Str("model", c.model).
+				Dur("latency", time.Since(start)).
+				Msg("ai roadmap generation retry request failed")
 			return nil, err
 		}
 		outline, err = parseCompactRoadmap(raw)
 		if err != nil {
-			c.log.Warn().Err(err).Str("snippet", truncate(raw, 800)).Msg("ai compact roadmap parse failed after retry")
+			c.log.Error().
+				Err(err).
+				Str("op", op).
+				Str("skill", skillName).
+				Str("snippet", truncate(raw, 800)).
+				Msg("ai compact roadmap parse failed after retry")
 			return nil, fmt.Errorf("parse roadmap json: %w", err)
 		}
 	}
 
 	drafts := flattenCompactRoadmap(outline)
 	if len(drafts) < minTopics {
-		return nil, fmt.Errorf("too few milestones generated (%d)", len(drafts))
+		err := fmt.Errorf("too few milestones generated (%d)", len(drafts))
+		c.log.Error().
+			Err(err).
+			Str("op", op).
+			Str("skill", skillName).
+			Int("milestones", len(drafts)).
+			Int("topics", len(outline.Topics)).
+			Msg("ai roadmap generation produced too few milestones")
+		return nil, err
 	}
 
 	topicCount := len(outline.Topics)
@@ -377,6 +443,13 @@ Rules:
 
 	raw, err := c.chatJSON(ctx, system, user)
 	if err != nil {
+		c.log.Error().
+			Err(err).
+			Str("op", "generate_quiz").
+			Str("model", c.model).
+			Int("topics", len(titles)).
+			Dur("latency", time.Since(start)).
+			Msg("ai quiz generation request failed")
 		return nil, err
 	}
 	quiz, err := parseCompactQuiz(raw)
@@ -384,17 +457,35 @@ Rules:
 		c.log.Warn().Err(err).Str("snippet", truncate(raw, 500)).Msg("ai quiz parse failed; retrying")
 		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Exactly 10 questions.")
 		if err != nil {
+			c.log.Error().
+				Err(err).
+				Str("op", "generate_quiz").
+				Str("model", c.model).
+				Dur("latency", time.Since(start)).
+				Msg("ai quiz generation retry request failed")
 			return nil, err
 		}
 		quiz, err = parseCompactQuiz(raw)
 		if err != nil {
+			c.log.Error().
+				Err(err).
+				Str("op", "generate_quiz").
+				Str("snippet", truncate(raw, 800)).
+				Msg("ai quiz parse failed after retry")
 			return nil, fmt.Errorf("parse quiz json: %w", err)
 		}
 	}
 
 	out := normalizeQuiz(quiz.Questions, titles)
 	if len(out) != quizQuestionCount {
-		return nil, fmt.Errorf("expected %d valid questions, got %d", quizQuestionCount, len(out))
+		err := fmt.Errorf("expected %d valid questions, got %d", quizQuestionCount, len(out))
+		c.log.Error().
+			Err(err).
+			Str("op", "generate_quiz").
+			Int("got", len(out)).
+			Int("raw_questions", len(quiz.Questions)).
+			Msg("ai quiz generation produced invalid questions")
+		return nil, err
 	}
 
 	c.log.Info().
@@ -785,12 +876,23 @@ func (c *Client) chatJSONOnce(ctx context.Context, system, user string) (string,
 
 	res, err := c.http.Do(req)
 	if err != nil {
+		c.log.Error().
+			Err(err).
+			Str("model", c.model).
+			Str("base_url", c.baseURL).
+			Dur("latency", time.Since(start)).
+			Msg("ai chat request transport failed")
 		return "", err
 	}
 	defer res.Body.Close()
 
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 2<<20))
 	if err != nil {
+		c.log.Error().
+			Err(err).
+			Str("model", c.model).
+			Dur("latency", time.Since(start)).
+			Msg("ai chat response body read failed")
 		return "", err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
@@ -798,7 +900,13 @@ func (c *Client) chatJSONOnce(ctx context.Context, system, user string) (string,
 		if len(snippet) > 400 {
 			snippet = snippet[:400] + "…"
 		}
-		c.log.Warn().
+		evt := c.log.Error()
+		if res.StatusCode == http.StatusTooManyRequests ||
+			res.StatusCode == http.StatusBadGateway ||
+			res.StatusCode == http.StatusServiceUnavailable {
+			evt = c.log.Warn()
+		}
+		evt.
 			Int("status", res.StatusCode).
 			Dur("latency", time.Since(start)).
 			Str("model", c.model).
@@ -817,9 +925,19 @@ func (c *Client) chatJSONOnce(ctx context.Context, system, user string) (string,
 
 	var parsed chatResponse
 	if err := json.Unmarshal(raw, &parsed); err != nil {
+		c.log.Error().
+			Err(err).
+			Str("model", c.model).
+			Str("snippet", truncate(string(raw), 400)).
+			Msg("ai chat response unmarshal failed")
 		return "", err
 	}
 	if len(parsed.Choices) == 0 || strings.TrimSpace(parsed.Choices[0].Message.Content) == "" {
+		c.log.Error().
+			Str("model", c.model).
+			Int("choices", len(parsed.Choices)).
+			Str("snippet", truncate(string(raw), 400)).
+			Msg("ai chat empty response")
 		return "", fmt.Errorf("ai provider empty response")
 	}
 	return extractJSONObject(parsed.Choices[0].Message.Content), nil

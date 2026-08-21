@@ -23,7 +23,7 @@ type userResponse struct {
 
 // registerResponse includes dev_otp in development so local testing needs no SMTP.
 type registerResponse struct {
-	PublicID      string `json:"public_id"`
+	PublicID      string `json:"public_id,omitempty"`
 	Email         string `json:"email"`
 	Username      string `json:"username"`
 	Name          string `json:"name"`

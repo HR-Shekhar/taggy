@@ -43,7 +43,7 @@ func (h *Handler) Register(c echo.Context) error {
 		return err
 	}
 
-	user, otp, err := h.service.Register(c.Request().Context(), RegisterInput{
+	pending, otp, err := h.service.Register(c.Request().Context(), RegisterInput{
 		Email:    req.Email,
 		Username: req.Username,
 		Name:     req.Name,
@@ -54,11 +54,11 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 
 	log.Info().
-		Str("user_id", user.PublicID.String()).
-		Str("username", user.Username).
+		Str("email", pending.Email).
+		Str("username", pending.Username).
 		Msg("register handled")
 
-	return c.JSON(http.StatusCreated, toRegisterResponse(user, h.devOTP(otp)))
+	return c.JSON(http.StatusCreated, toRegisterResponse(pending, h.devOTP(otp)))
 }
 
 func (h *Handler) Login(c echo.Context) error {
@@ -352,14 +352,13 @@ func toUserResponse(user sqlc.User) userResponse {
 	}
 }
 
-func toRegisterResponse(user sqlc.User, devOTP string) registerResponse {
+func toRegisterResponse(pending PendingSignup, devOTP string) registerResponse {
 	return registerResponse{
-		PublicID:      user.PublicID.String(),
-		Email:         user.Email,
-		Username:      user.Username,
-		Name:          user.Name,
-		EmailVerified: user.EmailVerified,
-		Subscription:  string(user.Subscription),
+		Email:         pending.Email,
+		Username:      pending.Username,
+		Name:          pending.Name,
+		EmailVerified: false,
+		Subscription:  string(sqlc.SubscriptionTierFREE),
 		DevOTP:        devOTP,
 	}
 }

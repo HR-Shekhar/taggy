@@ -148,7 +148,7 @@ func (s *Service) generateQuiz(ctx context.Context, id int64, podSlug string) {
 	topics := decodeStringSlice(quiz.CompletedTopicTitles)
 	drafts, err := s.ai.GenerateQuiz(ctx, topics)
 	if err != nil {
-		s.log.Warn().Err(err).Int64("id", id).Msg("quiz generation failed")
+		s.log.Error().Err(err).Int64("id", id).Str("quiz_id", quiz.PublicID.String()).Msg("quiz generation failed")
 		bg := context.WithoutCancel(ctx)
 		if _, ferr := s.repo.FailGenerating(bg, id); ferr != nil && !errors.Is(ferr, pgx.ErrNoRows) {
 			s.log.Error().Err(ferr).Int64("id", id).Msg("mark quiz failed")

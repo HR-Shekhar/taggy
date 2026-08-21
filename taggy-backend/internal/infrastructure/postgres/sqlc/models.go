@@ -1028,6 +1028,18 @@ type Payment struct {
 	UpdatedAt         pgtype.Timestamptz
 }
 
+type PendingRegistration struct {
+	ID           int64
+	Email        string
+	Username     string
+	Name         string
+	PasswordHash string
+	OtpHash      string
+	ExpiresAt    pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+}
+
 type Pod struct {
 	ID          int64
 	PublicID    uuid.UUID

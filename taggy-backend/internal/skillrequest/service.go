@@ -226,6 +226,12 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		return
 	}
 
+	s.log.Info().
+		Int64("id", id).
+		Str("request_id", req.PublicID.String()).
+		Str("name", req.Name).
+		Msg("skill request ai generation started")
+
 	desc := ""
 	if req.Description.Valid {
 		desc = req.Description.String
@@ -233,7 +239,7 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 
 	eval, err := s.generator.EvaluateSkillRequest(ctx, req.Name, desc)
 	if err != nil {
-		s.log.Warn().Err(err).Int64("id", id).Str("name", req.Name).Msg("skill request evaluation failed")
+		s.log.Error().Err(err).Int64("id", id).Str("name", req.Name).Str("request_id", req.PublicID.String()).Msg("skill request evaluation failed")
 		note := "AI review failed; please submit again"
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			note = "AI review timed out; please submit again"
@@ -269,7 +275,7 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 
 	drafts, err := s.generator.GenerateRoadmap(ctx, req.Name, desc, "", "")
 	if err != nil {
-		s.log.Warn().Err(err).Int64("id", id).Str("name", req.Name).Msg("skill request ai generation failed")
+		s.log.Error().Err(err).Int64("id", id).Str("name", req.Name).Str("request_id", req.PublicID.String()).Msg("skill request ai generation failed")
 		note := "AI generation failed; please submit again"
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			note = "AI generation timed out; please submit again"

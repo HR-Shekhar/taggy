@@ -301,6 +301,93 @@ func (r *Repository) IssueEmailVerificationOTP(
 	return tx.Commit(ctx)
 }
 
+func (r *Repository) DeleteExpiredPendingRegistrations(ctx context.Context) error {
+	return r.queries.DeleteExpiredPendingRegistrations(ctx)
+}
+
+func (r *Repository) GetPendingRegistrationByEmail(ctx context.Context, email string) (sqlc.PendingRegistration, error) {
+	return r.queries.GetPendingRegistrationByEmail(ctx, email)
+}
+
+func (r *Repository) GetActivePendingRegistrationByEmail(ctx context.Context, email string) (sqlc.PendingRegistration, error) {
+	return r.queries.GetActivePendingRegistrationByEmail(ctx, email)
+}
+
+func (r *Repository) GetActivePendingRegistrationByUsername(ctx context.Context, username string) (sqlc.PendingRegistration, error) {
+	return r.queries.GetActivePendingRegistrationByUsername(ctx, username)
+}
+
+func (r *Repository) UpsertPendingRegistration(
+	ctx context.Context,
+	email, username, name, passwordHash, otpHash string,
+	expiresAt time.Time,
+) (sqlc.PendingRegistration, error) {
+	return r.queries.UpsertPendingRegistration(ctx, sqlc.UpsertPendingRegistrationParams{
+		Email:        email,
+		Username:     username,
+		Name:         name,
+		PasswordHash: passwordHash,
+		OtpHash:      otpHash,
+		ExpiresAt:    pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+}
+
+func (r *Repository) UpdatePendingRegistrationOTP(
+	ctx context.Context,
+	email, otpHash string,
+	expiresAt time.Time,
+) (sqlc.PendingRegistration, error) {
+	return r.queries.UpdatePendingRegistrationOTP(ctx, sqlc.UpdatePendingRegistrationOTPParams{
+		Email:     email,
+		OtpHash:   otpHash,
+		ExpiresAt: pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+}
+
+// PromotePendingRegistration creates the real user+identity and deletes the pending row
+// in one transaction. If OTP never succeeds, this never runs and no user is stored.
+func (r *Repository) PromotePendingRegistration(ctx context.Context, pending sqlc.PendingRegistration) (sqlc.User, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return sqlc.User{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	user, err := qtx.CreateUser(ctx, sqlc.CreateUserParams{
+		Email:             pending.Email,
+		Username:          pending.Username,
+		Name:              pending.Name,
+		ProfilePictureUrl: pgtype.Text{},
+		Bio:               pgtype.Text{},
+		Subscription:      sqlc.SubscriptionTierFREE,
+		EmailVerified:     true,
+	})
+	if err != nil {
+		return sqlc.User{}, err
+	}
+
+	_, err = qtx.CreateIdentity(ctx, sqlc.CreateIdentityParams{
+		UserID:       user.ID,
+		Provider:     sqlc.ProviderNameLocal,
+		PasswordHash: pgtype.Text{String: pending.PasswordHash, Valid: true},
+	})
+	if err != nil {
+		return sqlc.User{}, err
+	}
+
+	if err := qtx.DeletePendingRegistrationByID(ctx, pending.ID); err != nil {
+		return sqlc.User{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return sqlc.User{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return user, nil
+}
+
 func (r *Repository) GetUserIsAdminByPublicID(ctx context.Context, publicID uuid.UUID) (bool, error) {
 	return r.queries.GetUserIsAdminByPublicID(ctx, publicID)
 }
