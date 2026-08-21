@@ -252,7 +252,7 @@ function RegisterPanel() {
         <UnderlineField
           id="register-name"
           label="Name"
-          placeholder="Optional"
+          placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="name"
