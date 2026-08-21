@@ -266,7 +266,7 @@ export default function SkillDetailPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {editPending ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-foreground/75">
                 You already have a generating or pending roadmap edit for this
                 skill.{" "}
                 <Link href="/requests" className="underline">
@@ -355,7 +355,7 @@ export default function SkillDetailPage() {
                     {isMine ? <Badge variant="default">yours</Badge> : null}
                     {v.is_current ? <Badge variant="outline">official</Badge> : null}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-foreground/75">
                     {v.status} · {v.milestone_count} milestones
                   </div>
                 </button>
@@ -392,7 +392,7 @@ export default function SkillDetailPage() {
           {progress != null && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
+                <span className="text-foreground/75">
                   Your progress
                   {enrolledVersion != null ? ` on v${enrolledVersion}` : ""}
                 </span>
@@ -462,7 +462,7 @@ export default function SkillDetailPage() {
                           {"chapter" in m &&
                           m.chapter &&
                           !("kind" in m && m.kind === "CHAPTER") ? (
-                            <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+                            <p className="mb-1 text-xs uppercase tracking-wide text-foreground/60">
                               {m.chapter}
                             </p>
                           ) : null}
@@ -470,12 +470,12 @@ export default function SkillDetailPage() {
                             {m.order_index}. {m.title}
                           </h3>
                           {m.description && (
-                            <p className="mt-1 text-sm text-muted-foreground">
+                            <p className="mt-1 text-sm text-foreground/75">
                               {m.description}
                             </p>
                           )}
                           {postponedLabel ? (
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="mt-1 text-xs text-foreground/75">
                               Postponed until {postponedLabel}
                             </p>
                           ) : null}
@@ -515,11 +515,11 @@ function StatusIcon({ status }: { status: string }) {
   }
   if (status === "POSTPONED") {
     return (
-      <PauseCircle className="relative z-10 size-8 shrink-0 bg-background text-muted-foreground" />
+      <PauseCircle className="relative z-10 size-8 shrink-0 bg-background text-foreground/50" />
     );
   }
   if (status === "IN_PROGRESS") {
     return <Clock3 className="relative z-10 size-8 shrink-0 bg-background text-primary" />;
   }
-  return <Circle className="relative z-10 size-8 shrink-0 bg-background text-muted-foreground" />;
+  return <Circle className="relative z-10 size-8 shrink-0 bg-background text-foreground/50" />;
 }

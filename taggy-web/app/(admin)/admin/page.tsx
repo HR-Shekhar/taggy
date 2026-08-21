@@ -120,22 +120,25 @@ export default function AdminPage() {
 
   if (loading) return <Loading />;
 
-  const pendingSkills = skills.length;
-  const pendingEdits = edits.length;
+  const pendingSkills = skills.filter((s) => s.status === "PENDING").length;
+  const pendingEdits = edits.filter((e) => e.status === "PENDING").length;
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Approvals"
-        description="Only platform admins can approve or reject catalog changes. Learners never see this page."
+        description="Skills auto-approve after AI generation; rejected and approved requests stay here so you can verify nothing went wrong. Learners never see this page."
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-border/80 bg-muted/30 px-4 py-3">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Skill requests
+            Skill requests needing action
           </p>
           <p className="font-serif text-2xl tabular-nums">{pendingSkills}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {skills.length} total in audit log
+          </p>
         </div>
         <div className="rounded-xl border border-border/80 bg-muted/30 px-4 py-3">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -148,10 +151,12 @@ export default function AdminPage() {
       <section className="space-y-3">
         <h2 className="font-serif text-lg">Skill creation queue</h2>
         {skills.length === 0 ? (
-          <Empty>No pending skill requests.</Empty>
+          <Empty>No skill requests yet.</Empty>
         ) : (
           <div className="space-y-4">
-            {skills.map((req) => (
+            {skills.map((req) => {
+              const isPending = req.status === "PENDING";
+              return (
               <Card key={req.id}>
                 <CardHeader>
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -159,57 +164,83 @@ export default function AdminPage() {
                       <CardTitle className="font-serif text-lg">{req.name}</CardTitle>
                       <CardDescription>
                         slug candidate: {req.slug_candidate}
+                        {req.created_skill_id != null
+                          ? ` · skill #${req.created_skill_id}`
+                          : ""}
                       </CardDescription>
                     </div>
-                    <Badge>{req.status}</Badge>
+                    <Badge
+                      variant={
+                        req.status === "APPROVED"
+                          ? "default"
+                          : req.status === "REJECTED"
+                            ? "destructive"
+                            : "secondary"
+                      }
+                    >
+                      {req.status}
+                    </Badge>
                   </div>
                   {req.description ? (
                     <p className="text-sm text-muted-foreground">{req.description}</p>
                   ) : null}
+                  {req.admin_note ? (
+                    <p className="text-sm text-foreground/80">
+                      Note: {req.admin_note}
+                    </p>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <DraftList drafts={req.draft_milestones ?? []} />
-                  <textarea
-                    className="min-h-16 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    placeholder="Optional reject note"
-                    value={notes[req.id] ?? ""}
-                    onChange={(e) =>
-                      setNotes((prev) => ({ ...prev, [req.id]: e.target.value }))
-                    }
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      disabled={busyId === req.id}
-                      onClick={async () => {
-                        setBusyId(req.id);
-                        const res = await adminApproveSkillRequest(req.id);
-                        setBusyId(null);
-                        if (!res.ok) toastApiError(res);
-                        else void load();
-                      }}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={busyId === req.id}
-                      onClick={async () => {
-                        setBusyId(req.id);
-                        const res = await adminRejectSkillRequest(
-                          req.id,
-                          notes[req.id]
-                        );
-                        setBusyId(null);
-                        if (!res.ok) toastApiError(res);
-                        else void load();
-                      }}
-                    >
-                      Reject
-                    </Button>
-                  </div>
+                  {isPending ? (
+                    <>
+                      <textarea
+                        className="min-h-16 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        placeholder="Optional reject note"
+                        value={notes[req.id] ?? ""}
+                        onChange={(e) =>
+                          setNotes((prev) => ({
+                            ...prev,
+                            [req.id]: e.target.value,
+                          }))
+                        }
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          disabled={busyId === req.id}
+                          onClick={async () => {
+                            setBusyId(req.id);
+                            const res = await adminApproveSkillRequest(req.id);
+                            setBusyId(null);
+                            if (!res.ok) toastApiError(res);
+                            else void load();
+                          }}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={busyId === req.id}
+                          onClick={async () => {
+                            setBusyId(req.id);
+                            const res = await adminRejectSkillRequest(
+                              req.id,
+                              notes[req.id]
+                            );
+                            setBusyId(null);
+                            if (!res.ok) toastApiError(res);
+                            else void load();
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

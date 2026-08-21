@@ -68,7 +68,7 @@ function SearchInner() {
           await runSearch(q);
         }}
       >
-        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/50" />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}

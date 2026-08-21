@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 function DraftRoadmap({ drafts }: { drafts: MilestoneDraft[] }) {
   if (!drafts?.length) {
     return (
-      <p className="text-sm text-muted-foreground">No draft milestones yet.</p>
+      <p className="text-sm text-foreground/75">No draft milestones yet.</p>
     );
   }
 
@@ -48,7 +48,7 @@ function DraftRoadmap({ drafts }: { drafts: MilestoneDraft[] }) {
 
   return (
     <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-foreground/75">
         {drafts.length} milestones across {chapters.length} topic
         {chapters.length === 1 ? "" : "s"}
       </p>
@@ -72,12 +72,12 @@ function DraftRoadmap({ drafts }: { drafts: MilestoneDraft[] }) {
                   ) : null}
                 </div>
                 {m.description ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-foreground/75">
                     {m.description}
                   </p>
                 ) : null}
                 {m.estimated_hours > 0 ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-foreground/75">
                     ~{m.estimated_hours}h · {m.difficulty || "unspecified"}
                   </p>
                 ) : null}
@@ -232,12 +232,12 @@ export default function MyRequestsPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {req.description ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/75">
                         {req.description}
                       </p>
                     ) : null}
                     {req.admin_note ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/75">
                         Note: {req.admin_note}
                       </p>
                     ) : null}
@@ -322,12 +322,12 @@ export default function MyRequestsPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {req.rationale ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/75">
                         {req.rationale}
                       </p>
                     ) : null}
                     {req.admin_note ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/75">
                         Note: {req.admin_note}
                       </p>
                     ) : null}

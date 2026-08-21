@@ -66,7 +66,7 @@ function VerifyForm() {
     >
       {email ? (
         <div className="space-y-2">
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground/60">
             Email
           </p>
           <p className="border-b border-foreground/25 pb-1.5 text-sm text-foreground">
@@ -80,7 +80,7 @@ function VerifyForm() {
           </Link>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-foreground/75">
           No email provided.{" "}
           <Link href="/register" className="text-primary hover:underline">
             Sign up again
@@ -102,7 +102,7 @@ function VerifyForm() {
         type="button"
         disabled={busy || !email.trim()}
         onClick={() => void onResend()}
-        className="w-full text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+        className="w-full text-sm text-foreground/75 hover:text-foreground disabled:opacity-50"
       >
         Resend code
       </button>

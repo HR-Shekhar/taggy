@@ -8,7 +8,7 @@ export function GoogleIconButton({ disabled }: { disabled?: boolean }) {
       type="button"
       disabled={disabled}
       onClick={() => startGoogleOAuth()}
-      className="flex size-11 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+      className="flex size-10 items-center justify-center rounded-full border border-primary/40 text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
       aria-label="Continue with Google"
     >
       <GoogleMark />
@@ -18,7 +18,7 @@ export function GoogleIconButton({ disabled }: { disabled?: boolean }) {
 
 function GoogleMark() {
   return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
       <path
         fill="currentColor"
         d="M21.6 12.23c0-.74-.07-1.45-.19-2.13H12v4.03h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.89-1.74 2.99-4.31 2.99-7.42Z"

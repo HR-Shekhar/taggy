@@ -293,14 +293,19 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		return
 	}
 
-	// Leave PENDING for admin review (do not auto-approve).
-	if s.notifier != nil {
-		s.notifier.NotifySkillRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.Name)
+	bg := context.WithoutCancel(ctx)
+	// Auto-publish the skill; the APPROVED row stays in the admin queue for audit.
+	if _, aerr := s.approvePending(bg, updated, 0, "Auto-approved after AI generation"); aerr != nil {
+		s.log.Error().Err(aerr).Int64("id", id).Msg("auto-approve skill request failed; left pending for admin")
+		if s.notifier != nil {
+			s.notifier.NotifySkillRequestReady(bg, updated.RequesterID, updated.Name)
+		}
+		return
 	}
 	s.log.Info().
 		Str("request_id", updated.PublicID.String()).
 		Int("milestones", len(drafts)).
-		Msg("skill creation draft ready for admin review")
+		Msg("skill creation request auto-approved")
 }
 
 func (s *Service) ListMine(ctx context.Context, userPublicID uuid.UUID) ([]RequestView, error) {
@@ -341,9 +346,9 @@ func (s *Service) Cancel(ctx context.Context, userPublicID uuid.UUID, requestPub
 }
 
 func (s *Service) ListPendingAdmin(ctx context.Context) ([]RequestView, error) {
-	rows, err := s.repo.ListPending(ctx, defaultListLimit)
+	rows, err := s.repo.ListAdmin(ctx, defaultListLimit)
 	if err != nil {
-		return nil, logging.Unexpected(s.log, err, "list pending skill requests failed")
+		return nil, logging.Unexpected(s.log, err, "list admin skill requests failed")
 	}
 	out := make([]RequestView, 0, len(rows))
 	for _, row := range rows {

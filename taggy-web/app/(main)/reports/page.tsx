@@ -91,7 +91,7 @@ export default function ReportsPage() {
                   {r.reason}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-0 text-xs text-muted-foreground">
+              <CardContent className="pt-0 text-xs text-foreground/75">
                 Filed {formatWhen(r.created_at)}
                 {r.resolved_at
                   ? ` · Resolved ${formatWhen(r.resolved_at)}`

@@ -21,16 +21,21 @@ export function AuthPair() {
 
   return (
     <AuthChrome>
-      <div className="relative w-full max-w-3xl overflow-hidden bg-card shadow-2xl ring-1 ring-border lg:h-[min(27rem,calc(100dvh-5.5rem))]">
+      <div className="relative w-full overflow-hidden bg-card shadow-2xl ring-1 ring-border lg:h-[min(32rem,calc(100dvh-7.5rem))]">
         {/* Login stays on the left */}
         <div
           className={cn(
-            "bg-card lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2",
-            isRegister ? "hidden lg:block" : "block"
+            "bg-card lg:absolute lg:inset-y-0 lg:left-0 lg:flex lg:w-1/2 lg:min-h-0 lg:flex-col",
+            isRegister ? "hidden lg:flex" : "block"
           )}
           aria-hidden={isRegister}
         >
-          <div className={cn(isRegister && "lg:pointer-events-none")}>
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              isRegister && "lg:pointer-events-none"
+            )}
+          >
             <LoginPanel />
           </div>
         </div>
@@ -38,12 +43,17 @@ export function AuthPair() {
         {/* Signup stays on the right */}
         <div
           className={cn(
-            "bg-card lg:absolute lg:inset-y-0 lg:left-1/2 lg:w-1/2",
-            isRegister ? "block" : "hidden lg:block"
+            "bg-card lg:absolute lg:inset-y-0 lg:left-1/2 lg:flex lg:w-1/2 lg:min-h-0 lg:flex-col",
+            isRegister ? "block" : "hidden lg:flex"
           )}
           aria-hidden={!isRegister}
         >
-          <div className={cn(!isRegister && "lg:pointer-events-none")}>
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              !isRegister && "lg:pointer-events-none"
+            )}
+          >
             <RegisterPanel />
           </div>
         </div>
@@ -94,7 +104,7 @@ export function AuthPair() {
 
 function AuthChrome({ children }: { children: ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-x-clip bg-transparent lg:h-dvh lg:overflow-hidden">
+    <div className="relative flex min-h-dvh flex-col overflow-x-clip bg-transparent lg:h-dvh lg:overflow-y-auto">
       <header className="relative z-20 flex shrink-0 items-center justify-between px-5 py-3 sm:px-8">
         <Link href="/" className="text-lg text-foreground">
           <BrandLogo size={32} wordmarkClassName="text-lg" />
@@ -102,8 +112,9 @@ function AuthChrome({ children }: { children: ReactNode }) {
         <ThemeToggle />
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-12 pt-4 sm:px-6 lg:overflow-hidden lg:pb-16">
-        {children}
+      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
+        {/* Outer pad keeps ring/shadow from clipping against the viewport */}
+        <div className="w-full max-w-3xl p-1.5 sm:p-2">{children}</div>
       </main>
     </div>
   );
@@ -163,7 +174,7 @@ function LoginPanel() {
         required
         autoComplete="current-password"
       />
-      <p className="pt-1 text-center text-sm text-muted-foreground lg:hidden">
+      <p className="pt-1 text-center text-sm text-foreground/75 lg:hidden">
         New here?{" "}
         <Link href="/register" className="text-foreground underline-offset-4 hover:underline">
           Sign up
@@ -226,7 +237,7 @@ function RegisterPanel() {
         required
         autoComplete="email"
       />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <UnderlineField
           id="register-username"
           label="Username"
@@ -247,7 +258,7 @@ function RegisterPanel() {
           autoComplete="name"
         />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <UnderlineField
           id="register-password"
           label="Password"
@@ -259,7 +270,7 @@ function RegisterPanel() {
           minLength={8}
           autoComplete="new-password"
         />
-        <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+        <ul className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px] text-foreground/60">
           <Rule ok={checks.length} label="8+" />
           <Rule ok={checks.upper} label="A-Z" />
           <Rule ok={checks.lower} label="a-z" />
@@ -267,7 +278,7 @@ function RegisterPanel() {
           <Rule ok={checks.special} label="symbol" />
         </ul>
       </div>
-      <p className="pt-1 text-center text-sm text-muted-foreground lg:hidden">
+      <p className="pt-1 text-center text-sm text-foreground/75 lg:hidden">
         Already have an account?{" "}
         <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
           Login
@@ -299,7 +310,7 @@ function passwordHint(password: string) {
 
 function Rule({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <li className={cn(ok ? "text-primary" : "text-muted-foreground")}>
+    <li className={cn(ok ? "text-primary" : "text-foreground/60")}>
       {ok ? "✓" : "○"} {label}
     </li>
   );
@@ -328,7 +339,7 @@ export function AuthForm({
 }) {
   return (
     <form
-      className="flex h-full flex-col justify-center overflow-y-auto px-6 py-5 sm:px-8 lg:py-5"
+      className="flex h-full flex-col justify-center overflow-hidden px-6 py-4 sm:px-8 lg:py-5"
       onSubmit={async (e) => {
         e.preventDefault();
         await onSubmit(e);
@@ -336,33 +347,33 @@ export function AuthForm({
     >
       <div
         className={cn(
-          "mb-3.5",
+          "mb-3",
           titleAlign === "end" && "lg:pr-2 lg:text-right"
         )}
       >
-        <h1 className="font-serif text-2xl tracking-tight text-foreground sm:text-3xl">
+        <h1 className="font-serif text-2xl tracking-tight text-foreground sm:text-[1.75rem]">
           {title}
         </h1>
-        {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="mt-1 text-sm text-foreground/75">{subtitle}</p>}
       </div>
 
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-2.5">{children}</div>
 
-      <div className="mt-4 flex shrink-0 flex-col items-center gap-3 pb-1">
+      <div className="mt-3.5 flex flex-col items-center gap-2.5">
         <Button
           type="submit"
           disabled={busy}
-          className="h-10 min-w-40"
+          className="h-9 min-w-36"
         >
           {busy && <Loader2 className="size-4 animate-spin" />}
           {busy ? "Please wait…" : submitLabel}
         </Button>
 
         {extra && (
-          <div className="w-full max-w-xs space-y-2.5">
+          <div className="w-full max-w-xs space-y-2">
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
-              <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              <span className="text-[10px] font-medium uppercase tracking-widest text-foreground/60">
                 or
               </span>
               <div className="h-px flex-1 bg-border" />
@@ -373,7 +384,7 @@ export function AuthForm({
       </div>
 
       {footer && (
-        <p className="mt-3 text-center text-sm text-muted-foreground">{footer}</p>
+        <p className="mt-2.5 text-center text-sm text-foreground/75">{footer}</p>
       )}
     </form>
   );
@@ -406,19 +417,21 @@ export function AuthShell({
 }) {
   return (
     <AuthChrome>
-      <div className="relative w-full max-w-3xl overflow-hidden shadow-2xl lg:h-[min(27rem,calc(100dvh-5.5rem))]">
-        <div className="bg-card lg:absolute lg:inset-y-0 lg:left-0 lg:w-1/2">
-          <AuthForm
-            title={title}
-            subtitle={subtitle}
-            submitLabel={submitLabel}
-            busy={busy}
-            onSubmit={onSubmit}
-            footer={footer}
-            extra={extra}
-          >
-            {children}
-          </AuthForm>
+      <div className="relative w-full overflow-hidden bg-card shadow-2xl ring-1 ring-border lg:h-[min(32rem,calc(100dvh-7.5rem))]">
+        <div className="bg-card lg:absolute lg:inset-y-0 lg:left-0 lg:flex lg:w-1/2 lg:min-h-0 lg:flex-col">
+          <div className="min-h-0 flex-1">
+            <AuthForm
+              title={title}
+              subtitle={subtitle}
+              submitLabel={submitLabel}
+              busy={busy}
+              onSubmit={onSubmit}
+              footer={footer}
+              extra={extra}
+            >
+              {children}
+            </AuthForm>
+          </div>
         </div>
         <div className="relative hidden min-h-[18rem] lg:absolute lg:inset-y-0 lg:left-1/2 lg:block lg:w-1/2 lg:min-h-0">
           <Image

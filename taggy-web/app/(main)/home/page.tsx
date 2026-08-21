@@ -208,7 +208,7 @@ export default function HomePage() {
           onSubmit={submitGlobalSearch}
           className="relative w-full shrink-0 sm:mt-1 sm:max-w-xs"
         >
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/50" />
           <Input
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
@@ -234,37 +234,37 @@ export default function HomePage() {
 
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
         <div className="bg-card px-4 py-3">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-sm text-foreground/75">
             <Flame className="size-3.5 text-primary" />
             Streak
           </div>
           <p className="mt-1 font-serif text-2xl tabular-nums">
             {currentStreak}
-            <span className="ml-1 text-sm text-muted-foreground">days</span>
+            <span className="ml-1 text-sm text-foreground/75">days</span>
           </p>
           <div className="mt-2">
             <ActivityDots active={activeDays} />
           </div>
         </div>
         <div className="bg-card px-4 py-3">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-sm text-foreground/75">
             <Timer className="size-3.5 text-primary" />
             This week
           </div>
           <p className="mt-1 font-serif text-2xl tabular-nums">
             {formatMinutes(weekly)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-foreground/75">
             Best streak {longestStreak}d
           </p>
         </div>
         <div className="bg-card px-4 py-3">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-sm text-foreground/75">
             <BookOpen className="size-3.5 text-primary" />
             Skills
           </div>
           <p className="mt-1 font-serif text-2xl tabular-nums">{skills.length}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-foreground/75">
             {pods.length} pod{pods.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -272,12 +272,12 @@ export default function HomePage() {
           href="/notifications"
           className="bg-card px-4 py-3 transition-colors hover:bg-muted/40"
         >
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-sm text-foreground/75">
             <Bell className="size-3.5 text-primary" />
             Unread
           </div>
           <p className="mt-1 font-serif text-2xl tabular-nums">{unread}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-foreground/75">
             {unread > 0 ? "Open inbox" : "All caught up"}
           </p>
         </Link>
@@ -316,7 +316,7 @@ export default function HomePage() {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{s.skill_name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/75">
                         {s.completed_count}/{s.milestone_count} milestones
                       </p>
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -328,7 +328,7 @@ export default function HomePage() {
                         />
                       </div>
                     </div>
-                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                    <ArrowRight className="size-4 shrink-0 text-foreground/50" />
                   </Link>
                 </li>
               ))}
@@ -381,7 +381,7 @@ export default function HomePage() {
                           ) : null}
                         </div>
                       </div>
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1 text-sm text-foreground/75">
                         <MessageCircle className="size-3.5" />
                         Chat
                       </span>

@@ -148,7 +148,7 @@ function PodsInner() {
                         {p.status ? <Badge variant="secondary">{p.status}</Badge> : null}
                         {p.role ? <Badge variant="outline">{p.role}</Badge> : null}
                         {p.skill_slug ? (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-foreground/75">
                             {p.skill_slug}
                           </span>
                         ) : null}
@@ -244,7 +244,7 @@ function PodsInner() {
                       >
                         {p.name}
                       </Link>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-foreground/75">
                         {p.accepted_count}/{p.max_members} · @{p.owner_username}
                       </p>
                     </div>
@@ -326,7 +326,7 @@ function PodsInner() {
                   title="Lowercase letters, numbers, and hyphens only"
                   required
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-foreground/75">
                   Used in the URL: /pods/{podLink.trim() || "your-pod-link"}
                 </p>
               </div>

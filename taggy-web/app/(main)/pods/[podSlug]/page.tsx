@@ -214,7 +214,7 @@ export default function PodDetailPage() {
               <h1 className="truncate font-serif text-xl tracking-tight">
                 {String(pod.name ?? podSlug)}
               </h1>
-      <p className="truncate text-xs text-muted-foreground">
+      <p className="truncate text-xs text-foreground/75">
                 {String(pod.skill_name ?? pod.skill_slug ?? "")}
                 {" · "}
                 @{String(pod.owner_username ?? "")}
@@ -343,7 +343,7 @@ export default function PodDetailPage() {
                 className="border-t border-border/60"
               >
                 {joinRequests.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground/75">
                     No pending requests.
                   </p>
                 ) : (

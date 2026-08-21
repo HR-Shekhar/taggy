@@ -5,16 +5,17 @@ import { Reveal } from "@/components/marketing/reveal";
 
 export function CtaSection() {
   return (
-    <section className="relative py-16">
-      <Reveal className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-        <h2 className="font-serif text-3xl tracking-tight sm:text-4xl">
+    <section className="relative py-24 overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,var(--color-primary)_0%,transparent_60%)] opacity-10" />
+      <Reveal className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
+        <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">
           Ready to grow with your people?
         </h2>
-        <p className="mt-4 text-muted-foreground">
+        <p className="mt-6 text-lg text-foreground/70">
           Create your account, verify email, pick a skill, and find a pod today.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/register" className={cn(buttonVariants({ size: "lg" }))}>
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
+          <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-8")}>
             Create free account
           </Link>
         </div>

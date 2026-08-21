@@ -182,7 +182,7 @@ export default function ProfilePage() {
                 <h1 className="font-serif text-2xl font-medium tracking-tight">
                   {displayName}
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-foreground/75">
                   @{profile.username ?? routeUser}
                 </p>
               </div>
@@ -201,19 +201,19 @@ export default function ProfilePage() {
                 ) : null}
               </div>
               {uploading ? (
-                <p className="text-xs text-muted-foreground">Uploading photo…</p>
+                <p className="text-xs text-foreground/75">Uploading photo…</p>
               ) : isSelf ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-foreground/75">
                   Click the camera to change your photo. JPG, PNG, WEBP, or GIF ·
                   up to 500 KB.
                 </p>
               ) : null}
             </div>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            <p className="max-w-2xl text-sm leading-relaxed text-foreground/75">
               {profile.bio?.trim() || "No bio yet."}
             </p>
             {isSelf && profile.email ? (
-              <p className="text-xs text-muted-foreground">{profile.email}</p>
+              <p className="text-xs text-foreground/75">{profile.email}</p>
             ) : null}
           </div>
         </CardContent>

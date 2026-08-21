@@ -40,6 +40,17 @@ ORDER BY created_at ASC
 LIMIT sqlc.arg(result_limit);
 
 
+-- Admin audit queue: pending (actionable) plus approved/rejected for later verification.
+-- name: ListAdminSkillCreationRequests :many
+SELECT *
+FROM skill_creation_request
+WHERE status IN ('PENDING', 'APPROVED', 'REJECTED')
+ORDER BY
+  CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
+  updated_at DESC
+LIMIT sqlc.arg(result_limit);
+
+
 -- name: ListGeneratingSkillCreationRequests :many
 SELECT id
 FROM skill_creation_request

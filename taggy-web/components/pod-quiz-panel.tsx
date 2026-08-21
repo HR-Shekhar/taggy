@@ -222,7 +222,7 @@ export function PodQuizPanel({
 
   if (!enabled) {
     return (
-      <div className="space-y-2 px-1 py-2 text-sm text-muted-foreground">
+      <div className="space-y-2 px-1 py-2 text-sm text-foreground/75">
         {showQuiz
           ? "Join this pod to take evaluation quizzes and appear on the leaderboard."
           : "Join this pod to appear on the leaderboard."}
@@ -245,12 +245,12 @@ export function PodQuizPanel({
               </Button>
             ) : null}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-foreground/75">
             10 AI questions from your completed topics. 60s each. Score =
             topics × correct.
           </p>
           {quiz?.status === "GENERATING" ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-foreground/75">
               Generating quiz questions… this can take several minutes.
             </p>
           ) : null}
@@ -269,7 +269,7 @@ export function PodQuizPanel({
             ) : null}
           </div>
           <p className="text-sm font-medium leading-snug">{current.prompt}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-foreground/75">
             Topic: {current.topic_title} · select all that apply
           </p>
           <ul className="space-y-1.5">
@@ -291,7 +291,7 @@ export function PodQuizPanel({
                       !picked && !showKey && "border-border hover:bg-muted/60"
                     )}
                   >
-                    <span className="mr-2 text-muted-foreground">
+                    <span className="mr-2 text-foreground/50">
                       {String.fromCharCode(65 + idx)}.
                     </span>
                     {opt}
@@ -301,7 +301,7 @@ export function PodQuizPanel({
             })}
           </ul>
           {feedback ? (
-            <p className="text-sm text-muted-foreground">{feedback}</p>
+            <p className="text-sm text-foreground/75">{feedback}</p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             {!current.answered ? (
@@ -324,7 +324,7 @@ export function PodQuizPanel({
       {showQuiz && quiz?.status === "COMPLETED" ? (
         <div className="rounded-lg border border-border/80 bg-muted/30 p-3 text-sm">
           <p className="font-medium">Last score: {quiz.score}</p>
-          <p className="text-muted-foreground">
+          <p className="text-foreground/75">
             {quiz.correct_count}/10 correct · {quiz.topic_count} completed topics
           </p>
         </div>
@@ -336,7 +336,7 @@ export function PodQuizPanel({
             <p className="text-sm font-medium">Pod leaderboard</p>
           )}
           {leaderboard.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No quiz scores yet.</p>
+            <p className="text-xs text-foreground/75">No quiz scores yet.</p>
           ) : (
             <ol className="space-y-1 text-sm">
               {leaderboard.map((e) => (
@@ -345,7 +345,7 @@ export function PodQuizPanel({
                   className="flex items-center justify-between gap-2 rounded-md px-2 py-1 hover:bg-muted/50"
                 >
                   <span className="truncate">
-                    <span className="text-muted-foreground">#{e.rank}</span>{" "}
+                    <span className="text-foreground/50">#{e.rank}</span>{" "}
                     {e.name || e.username}
                   </span>
                   <span className="shrink-0 font-medium">{e.best_score}</span>

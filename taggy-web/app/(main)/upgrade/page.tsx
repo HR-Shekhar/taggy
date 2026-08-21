@@ -30,9 +30,9 @@ export default function UpgradePage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
-          <p className="text-sm font-medium text-muted-foreground">Free</p>
+          <p className="text-sm font-medium text-foreground/75">Free</p>
           <h2 className="mt-1 font-serif text-2xl">Starter</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-foreground/75">
             Great for focusing on one skill at a time.
           </p>
           <ul className="mt-6 space-y-2.5">
@@ -61,7 +61,7 @@ export default function UpgradePage() {
           </span>
           <p className="text-sm font-medium text-primary">Premium</p>
           <h2 className="mt-1 font-serif text-2xl">Unlimited</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-foreground/75">
             Billing is finishing up. You&apos;ll unlock unlimited skill
             enrollments with a one-time purchase.
           </p>

@@ -63,11 +63,11 @@ function SidebarBackground() {
     <>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[url('/images/sidebar.jpg')] bg-cover bg-bottom bg-no-repeat opacity-40 dark:opacity-30"
+        className="pointer-events-none absolute inset-0 bg-[url('/images/sidebar.jpg')] bg-cover bg-bottom bg-no-repeat opacity-18 dark:opacity-12"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/95 to-sidebar"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/98 to-sidebar"
       />
     </>
   );
@@ -114,7 +114,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                   : "bg-primary/15 text-foreground"
                 : isAdminLink
                   ? "text-amber-800 hover:bg-amber-500/10 dark:text-amber-200"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             )}
           >
             <span className="relative shrink-0">

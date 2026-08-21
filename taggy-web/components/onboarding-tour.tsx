@@ -60,8 +60,6 @@ type StepDef = {
   href?: string;
   targets: string[];
   ctaLabel: string;
-  /** Force tip to corner so large feature cards stay fully visible */
-  tipCorner?: "bottom-right" | "auto";
 };
 
 const STEPS: Record<TourStepId, StepDef> = {
@@ -70,9 +68,8 @@ const STEPS: Record<TourStepId, StepDef> = {
     title: "Your Home hub",
     body: "This whole area is your dashboard — continue skills, streaks, search, and shortcuts. Click Go to Skills when you’re ready.",
     href: "/home",
-    targets: ["home-main", "home-cta", "nav-home"],
+    targets: ["home-cta", "home-main", "nav-home"],
     ctaLabel: "Go to Skills",
-    tipCorner: "bottom-right",
   },
   skills_join_or_request: {
     id: "skills_join_or_request",
@@ -81,7 +78,6 @@ const STEPS: Record<TourStepId, StepDef> = {
     href: "/skills",
     targets: ["skills-catalog", "skills-request", "skills-page", "nav-skills"],
     ctaLabel: "Continue",
-    tipCorner: "bottom-right",
   },
   skills_waiting: {
     id: "skills_waiting",
@@ -90,25 +86,22 @@ const STEPS: Record<TourStepId, StepDef> = {
     href: "/skills",
     targets: ["skills-catalog", "nav-skills", "skills-page"],
     ctaLabel: "I’ve joined — continue",
-    tipCorner: "bottom-right",
   },
   pods_join_or_create: {
     id: "pods_join_or_create",
     title: "Find or create a pod",
     body: "Browse pods for your skill, Join one, or Create pod. After you’re in a pod we’ll walk through chat, audio, and quizzes.",
     href: "/pods",
-    targets: ["pods-page", "pods-create", "nav-pods"],
+    targets: ["pods-create", "pods-page", "nav-pods"],
     ctaLabel: "Continue",
-    tipCorner: "bottom-right",
   },
   pods_waiting: {
     id: "pods_waiting",
     title: "Get into a pod",
     body: "Join or create a pod on this page. Once accepted, we’ll open it and explore chat, audio rooms, and quizzes together.",
     href: "/pods",
-    targets: ["pods-page", "pods-create", "nav-pods"],
+    targets: ["pods-create", "pods-page", "nav-pods"],
     ctaLabel: "I’m in a pod — continue",
-    tipCorner: "bottom-right",
   },
   pod_chat: {
     id: "pod_chat",
@@ -116,15 +109,13 @@ const STEPS: Record<TourStepId, StepDef> = {
     body: "This is your pod chatroom — send messages, reply, and stay accountable. Try typing a hello, then continue to audio rooms.",
     targets: ["pod-chat", "pod-workspace"],
     ctaLabel: "Next: audio rooms",
-    tipCorner: "bottom-right",
   },
   pod_audio: {
     id: "pod_audio",
     title: "Live audio rooms",
     body: "Create or join an audio room from this panel to study together live. Click Create room (or open an existing one), then continue.",
-    targets: ["pod-audio", "pod-audio-panel", "pod-audio-mobile", "pod-workspace"],
+    targets: ["pod-audio-panel", "pod-audio", "pod-audio-mobile", "pod-workspace"],
     ctaLabel: "Next: quizzes",
-    tipCorner: "bottom-right",
   },
   pod_quiz: {
     id: "pod_quiz",
@@ -132,7 +123,6 @@ const STEPS: Record<TourStepId, StepDef> = {
     body: "Pod quizzes and leaderboards live here. Open Take quiz on Progress when you want to compete — then we’ll visit Community.",
     targets: ["pod-quiz", "pod-members", "pod-workspace"],
     ctaLabel: "Go to Community",
-    tipCorner: "bottom-right",
   },
   community_leaderboards: {
     id: "community_leaderboards",
@@ -141,14 +131,13 @@ const STEPS: Record<TourStepId, StepDef> = {
     href: "/community",
     targets: ["community-page", "nav-community"],
     ctaLabel: "Finish tour",
-    tipCorner: "bottom-right",
   },
   done: {
     id: "done",
     title: "You’re set",
     body: "You covered Home → Skills → Pods (chat, audio, quiz) → Community. Click Home whenever you want to continue learning.",
     href: "/home",
-    targets: ["nav-home", "home-cta"],
+    targets: ["home-cta", "nav-home"],
     ctaLabel: "Go to Home",
   },
 };
@@ -275,53 +264,48 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-function tipPosition(
-  rect: SpotlightRect | null,
-  corner?: "bottom-right" | "auto"
-): CSSProperties {
+function tipPosition(rect: SpotlightRect | null): CSSProperties {
   const tipW = Math.min(352, window.innerWidth - 24);
-  const tipH = 260;
+  const tipH = 220;
   const margin = 12;
+  const gap = 12;
 
-  if (!rect || corner === "bottom-right") {
+  if (!rect) {
     return {
       position: "fixed",
-      right: margin,
-      bottom: margin,
-      width: tipW,
-      maxHeight: "min(70vh, 22rem)",
-    };
-  }
-
-  const large =
-    rect.width * rect.height > window.innerWidth * window.innerHeight * 0.28 ||
-    rect.width > 380;
-
-  if (large) {
-    return {
-      position: "fixed",
-      right: margin,
-      bottom: margin,
+      left: "50%",
+      bottom: margin + 8,
+      transform: "translateX(-50%)",
       width: tipW,
       maxHeight: "min(70vh, 22rem)",
     };
   }
 
   const spaceRight = window.innerWidth - (rect.left + rect.width);
+  const spaceLeft = rect.left;
   const spaceBelow = window.innerHeight - (rect.top + rect.height);
+  const spaceAbove = rect.top;
 
   let top: number;
   let left: number;
 
-  if (spaceRight > tipW + 24 && rect.width < 280) {
-    left = rect.left + rect.width + 14;
+  // Prefer: right of target → below → above → left → overlay near top of target
+  if (spaceRight >= tipW + gap + 8) {
+    left = rect.left + rect.width + gap;
     top = rect.top;
-  } else if (spaceBelow > tipH + 16) {
-    left = rect.left;
-    top = rect.top + rect.height + 14;
+  } else if (spaceBelow >= tipH + gap) {
+    left = rect.left + Math.max(0, (Math.min(rect.width, tipW + 40) - tipW) / 2);
+    top = rect.top + rect.height + gap;
+  } else if (spaceAbove >= tipH + gap) {
+    left = rect.left + Math.max(0, (Math.min(rect.width, tipW + 40) - tipW) / 2);
+    top = rect.top - tipH - gap;
+  } else if (spaceLeft >= tipW + gap + 8) {
+    left = rect.left - tipW - gap;
+    top = rect.top;
   } else {
-    left = rect.left;
-    top = rect.top - tipH - 14;
+    // Tall/full-page spotlight: keep tip near the target's top edge
+    left = rect.left + Math.max(0, (rect.width - tipW) / 2);
+    top = rect.top + gap;
   }
 
   left = clamp(left, margin, window.innerWidth - tipW - margin);
@@ -355,10 +339,7 @@ function Coachmark({
 }) {
   const rect = useTargetRect(step.targets, true);
   const pad = 6;
-  const style = useMemo(
-    () => tipPosition(rect, step.tipCorner),
-    [rect, step.tipCorner]
-  );
+  const style = useMemo(() => tipPosition(rect), [rect]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[55] overflow-hidden">
@@ -371,7 +352,7 @@ function Coachmark({
             left: rect.left - pad,
             width: rect.width + pad * 2,
             height: rect.height + pad * 2,
-            boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.22)",
+            boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.14)",
           }}
         />
       ) : null}

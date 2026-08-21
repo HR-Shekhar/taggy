@@ -105,6 +105,10 @@ func (r *Repository) ListPending(ctx context.Context, limit int32) ([]sqlc.Skill
 	return r.queries.ListPendingSkillCreationRequests(ctx, limit)
 }
 
+func (r *Repository) ListAdmin(ctx context.Context, limit int32) ([]sqlc.SkillCreationRequest, error) {
+	return r.queries.ListAdminSkillCreationRequests(ctx, limit)
+}
+
 func (r *Repository) Cancel(ctx context.Context, publicID uuid.UUID, requesterID int64) (sqlc.SkillCreationRequest, error) {
 	return r.queries.CancelSkillCreationRequest(ctx, sqlc.CancelSkillCreationRequestParams{
 		PublicID:    publicID,

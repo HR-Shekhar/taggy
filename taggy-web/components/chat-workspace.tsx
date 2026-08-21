@@ -128,7 +128,7 @@ export function ChatWorkspace({
             ) : (
               <button
                 type="button"
-                className="flex h-full w-full flex-col items-center gap-3 px-1 py-4 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                className="flex h-full w-full flex-col items-center gap-3 px-1 py-4 text-foreground/60 hover:bg-muted/50 hover:text-foreground"
                 onClick={() => setLeftOpen(true)}
                 aria-label={`Expand ${leftLabel}`}
               >
@@ -172,7 +172,7 @@ export function ChatWorkspace({
                     <div className="text-xs font-semibold text-primary">
                       Replying to @{replyTo.author_username}
                     </div>
-                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                    <div className="mt-0.5 truncate text-xs text-foreground/60">
                       {replyTo.content}
                     </div>
                   </div>
@@ -225,7 +225,7 @@ export function ChatWorkspace({
           ) : (
             <button
               type="button"
-              className="flex h-full w-full flex-col items-center gap-3 px-1 py-4 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              className="flex h-full w-full flex-col items-center gap-3 px-1 py-4 text-foreground/60 hover:bg-muted/50 hover:text-foreground"
               onClick={() => setRightOpen(true)}
               aria-label="Expand audio rooms"
             >
@@ -266,11 +266,11 @@ export function ChatSidebarSection({
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
       <div className="shrink-0 border-b border-border/60 px-3 py-3">
-        <h2 className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <h2 className="text-xs font-medium uppercase tracking-[0.16em] text-foreground/60">
           {title}
         </h2>
         {description ? (
-          <p className="mt-1 text-xs text-muted-foreground/90">{description}</p>
+          <p className="mt-1 text-xs text-foreground/60">{description}</p>
         ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
@@ -325,7 +325,7 @@ export function AudioRoomsSidebar({
         ) : null}
 
         {rooms.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyHint}</p>
+          <p className="text-sm text-foreground/75">{emptyHint}</p>
         ) : (
           <ul className="space-y-2">
             {rooms.map((r) => (
@@ -337,7 +337,7 @@ export function AudioRoomsSidebar({
                   <div className="min-w-0">
                     <div className="truncate font-medium">{r.title}</div>
                     {r.host_username ? (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-foreground/60">
                         @{r.host_username}
                       </div>
                     ) : null}

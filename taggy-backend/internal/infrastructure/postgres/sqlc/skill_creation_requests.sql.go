@@ -364,6 +364,53 @@ func (q *Queries) GetSkillCreationRequestByPublicID(ctx context.Context, publicI
 	return i, err
 }
 
+const listAdminSkillCreationRequests = `-- name: ListAdminSkillCreationRequests :many
+SELECT id, public_id, requester_id, name, slug_candidate, description, status, similar_skills, draft_milestones, admin_note, reviewed_by, reviewed_at, created_skill_id, created_at, updated_at
+FROM skill_creation_request
+WHERE status IN ('PENDING', 'APPROVED', 'REJECTED')
+ORDER BY
+  CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
+  updated_at DESC
+LIMIT $1
+`
+
+// Admin audit queue: pending (actionable) plus approved/rejected for later verification.
+func (q *Queries) ListAdminSkillCreationRequests(ctx context.Context, resultLimit int32) ([]SkillCreationRequest, error) {
+	rows, err := q.db.Query(ctx, listAdminSkillCreationRequests, resultLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SkillCreationRequest
+	for rows.Next() {
+		var i SkillCreationRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.PublicID,
+			&i.RequesterID,
+			&i.Name,
+			&i.SlugCandidate,
+			&i.Description,
+			&i.Status,
+			&i.SimilarSkills,
+			&i.DraftMilestones,
+			&i.AdminNote,
+			&i.ReviewedBy,
+			&i.ReviewedAt,
+			&i.CreatedSkillID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGeneratingSkillCreationRequests = `-- name: ListGeneratingSkillCreationRequests :many
 SELECT id
 FROM skill_creation_request

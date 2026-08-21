@@ -369,7 +369,7 @@ function ProgressInner() {
               {streak?.current_streak ?? 0}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-sm text-foreground/75">
             Best {streak?.longest_streak ?? 0} days
           </CardContent>
         </Card>
@@ -382,7 +382,7 @@ function ProgressInner() {
               {formatMinutes(summary?.weekly_minutes ?? 0)}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-sm text-foreground/75">
             {formatMinutes(summary?.monthly_minutes ?? 0)} this month
           </CardContent>
         </Card>
@@ -393,7 +393,7 @@ function ProgressInner() {
               {formatMinutes(summary?.total_minutes ?? 0)}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-sm text-foreground/75">
             Across all enrolled skills
           </CardContent>
         </Card>
@@ -404,7 +404,7 @@ function ProgressInner() {
               {streak?.last_activity_date ?? "—"}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-sm text-foreground/75">
             {skills.length} active skill{skills.length === 1 ? "" : "s"}
           </CardContent>
         </Card>
@@ -434,7 +434,7 @@ function ProgressInner() {
         {selectedSkill ? (
           <div className="min-w-[14rem] flex-1 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
+              <span className="text-foreground/75">
                 v{selectedSkill.roadmap_version_number} ·{" "}
                 {selectedSkill.completed_count}/{selectedSkill.milestone_count}{" "}
                 complete
@@ -507,7 +507,7 @@ function ProgressInner() {
                         className="flex w-full items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
                       >
                         <span className="flex min-w-0 items-center gap-2">
-                          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                          <ChevronRight className="size-4 shrink-0 text-foreground/50" />
                           <CheckCircle2 className="size-4 shrink-0 text-primary" />
                           <span className="truncate font-medium">
                             {group.title}
@@ -559,7 +559,7 @@ function ProgressInner() {
                               />
                             )}
                             <div>
-                              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-foreground/60">
                                 Topic
                               </p>
                               <h3 className="font-serif text-lg leading-tight">
@@ -568,12 +568,12 @@ function ProgressInner() {
                             </div>
                           </div>
                           {chapter?.description ? (
-                            <p className="pl-10 text-sm text-muted-foreground">
+                            <p className="pl-10 text-sm text-foreground/75">
                               {chapter.description}
                             </p>
                           ) : null}
                           {chapterPostponed ? (
-                            <p className="pl-10 text-xs text-muted-foreground">
+                            <p className="pl-10 text-xs text-foreground/75">
                               Postponed until {chapterPostponed}
                             </p>
                           ) : null}
@@ -615,19 +615,19 @@ function ProgressInner() {
                                   <div className="flex min-w-0 items-start gap-2">
                                     <StatusIcon status={t.status} size="sm" />
                                     <div className="min-w-0">
-                                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      <p className="text-[10px] uppercase tracking-wide text-foreground/60">
                                         Subtopic
                                       </p>
                                       <p className="font-medium leading-snug">
                                         {t.title}
                                       </p>
                                       {t.description ? (
-                                        <p className="mt-0.5 text-sm text-muted-foreground">
+                                        <p className="mt-0.5 text-sm text-foreground/75">
                                           {t.description}
                                         </p>
                                       ) : null}
                                       {postponedLabel ? (
-                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                        <p className="mt-0.5 text-xs text-foreground/75">
                                           Postponed until {postponedLabel}
                                         </p>
                                       ) : null}
@@ -674,7 +674,7 @@ function ProgressInner() {
                           })}
                         </ul>
                       ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">
+                        <p className="mt-3 text-sm text-foreground/75">
                           No subtopics under this topic.
                         </p>
                       )}
@@ -693,7 +693,7 @@ function ProgressInner() {
                               Finish topic
                             </Button>
                           ) : (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-foreground/75">
                               Complete every subtopic before finishing this
                               topic.
                             </p>
@@ -730,7 +730,7 @@ function ProgressInner() {
                 <Empty>Select a skill first.</Empty>
               ) : !podSlug ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground/75">
                     You&apos;re not in a pod for this skill yet.
                   </p>
                   <Link
@@ -742,7 +742,7 @@ function ProgressInner() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-foreground/75">
                     Pod:{" "}
                     <Link
                       href={`/pods/${podSlug}`}
@@ -834,7 +834,7 @@ function ProgressInner() {
                       <div className="font-medium">
                         {row.skill_slug} · {row.duration_minutes}m
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-foreground/75">
                         {row.studied_at}
                         {row.notes ? ` · ${row.notes}` : ""}
                       </div>

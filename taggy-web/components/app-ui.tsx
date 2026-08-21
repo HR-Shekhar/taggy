@@ -46,7 +46,7 @@ export function ErrorBox({
       {title ? (
         <>
           <p className="font-medium text-foreground">{title}</p>
-          <p className="mt-0.5 text-muted-foreground">{message}</p>
+          <p className="mt-0.5 text-foreground/80">{message}</p>
         </>
       ) : (
         <p className="font-medium text-foreground">{message}</p>
@@ -128,7 +128,7 @@ export function GenerationWaitNote({
 }) {
   if (!active) return null;
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground transition-all duration-300">
+    <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground/80 transition-all duration-300">
       <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
       <p>{label}</p>
     </div>
@@ -137,7 +137,7 @@ export function GenerationWaitNote({
 
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-foreground/80">
       <Loader2 className="size-4 animate-spin" />
       <span>{label}</span>
     </div>
@@ -223,12 +223,12 @@ export function Empty({
           <p className="mt-4 font-serif text-lg text-foreground">{title}</p>
         ) : null}
         {description ? (
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          <p className="mt-1 max-w-sm text-sm text-foreground/80">
             {description}
           </p>
         ) : null}
         {children ? (
-          <div className="mt-2 text-sm text-muted-foreground">{children}</div>
+          <div className="mt-2 text-sm text-foreground/80">{children}</div>
         ) : null}
         {action ? <div className="mt-5">{action}</div> : null}
       </div>
@@ -238,7 +238,7 @@ export function Empty({
   return (
     <p
       className={cn(
-        "rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground",
+        "rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-foreground/80",
         className
       )}
     >
@@ -330,7 +330,7 @@ export function PageHeader({
           {title}
         </h1>
         {description && (
-          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+          <p className="max-w-xl text-sm leading-relaxed text-foreground/75 sm:text-base">
             {description}
           </p>
         )}
@@ -364,7 +364,7 @@ export function Section({
               <h2 className="font-serif text-xl text-foreground">{title}</h2>
             ) : null}
             {description ? (
-              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+              <p className="mt-0.5 text-sm text-foreground/75">{description}</p>
             ) : null}
           </div>
           {action}

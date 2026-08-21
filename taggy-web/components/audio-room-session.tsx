@@ -130,7 +130,7 @@ export function AudioRoomSession({
             </Button>
           </div>
 
-          <div className="min-h-8 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+          <div className="min-h-8 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-sm text-foreground/75">
             {connected
               ? "Live audio connected — you can leave this page and stay in the call."
               : "Join to connect microphone and hear others."}
@@ -139,7 +139,7 @@ export function AudioRoomSession({
           <div>
             <h3 className="mb-2 text-sm font-medium">Participants</h3>
             {participants.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No one here yet.</p>
+              <p className="text-sm text-foreground/75">No one here yet.</p>
             ) : (
               <ul className="space-y-2">
                 {participants.map((p) => (

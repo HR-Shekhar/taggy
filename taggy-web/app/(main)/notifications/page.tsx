@@ -329,7 +329,7 @@ export default function NotificationsPage() {
                     <CardDescription className="mt-1 text-sm text-foreground/80">
                       {n.body}
                     </CardDescription>
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <p className="mt-2 text-xs text-foreground/75">
                       {n.type.replaceAll("_", " ")} · {formatWhen(n.created_at)}
                     </p>
                   </div>

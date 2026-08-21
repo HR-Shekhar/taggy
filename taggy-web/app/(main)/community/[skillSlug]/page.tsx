@@ -168,7 +168,7 @@ export default function CommunityPage() {
             <h1 className="truncate font-serif text-xl tracking-tight">
               #{activeChannel?.name ?? channelSlug ?? "channel"}
             </h1>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-foreground/75">
               {skillSlug} community
             </p>
           </div>
@@ -227,10 +227,10 @@ export default function CommunityPage() {
                           "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
                           active
                             ? "bg-secondary text-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            : "text-foreground/75 hover:bg-muted hover:text-foreground"
                         )}
                       >
-                        <span className="text-muted-foreground">#</span>
+                        <span className="text-foreground/50">#</span>
                         <span className="truncate">{c.name}</span>
                       </button>
                     </li>

@@ -17,7 +17,7 @@ function variantForPath(pathname: string): BgVariant {
   return "app";
 }
 
-/** Calm backdrop: solid for app, soft imagery for landing/auth. */
+/** Clean backdrop: solid app surface; light photo wash on landing/auth only. */
 export function PageBackground() {
   const pathname = usePathname();
   const variant = variantForPath(pathname);
@@ -28,7 +28,7 @@ export function PageBackground() {
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-background"
         aria-hidden
       >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.9_0.03_154/0.35),transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,oklch(0.35_0.04_154/0.25),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--color-primary)_0%,transparent_60%)] opacity-[0.03] dark:opacity-[0.02]" />
       </div>
     );
   }
@@ -38,26 +38,24 @@ export function PageBackground() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-background"
       aria-hidden
     >
       <div
         className={
           variant === "landing"
-            ? // Light: keep photo, lift blacks into sage/warm — no pure invert (too white)
-              "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.55] [filter:sepia(0.35)_saturate(0.85)_hue-rotate(55deg)_brightness(1.15)_contrast(0.92)] dark:opacity-[0.62] dark:[filter:none]"
-            : "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.18] dark:opacity-[0.14]"
+            ? "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.28] [filter:brightness(1.45)_saturate(0.85)_sepia(0.12)_hue-rotate(35deg)] dark:opacity-[0.4] dark:[filter:brightness(0.95)_saturate(0.9)]"
+            : "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.16] dark:opacity-[0.12]"
         }
         style={{ backgroundImage: `url(${src})` }}
       />
       <div
         className={
           variant === "landing"
-            ? "absolute inset-0 bg-[oklch(0.94_0.03_145/0.45)] dark:bg-background/40"
-            : "absolute inset-0 bg-background/72 dark:bg-background/78"
+            ? "absolute inset-0 bg-background/70 dark:bg-background/55"
+            : "absolute inset-0 bg-background/75 dark:bg-background/80"
         }
       />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.72_0.05_145/0.18),transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,oklch(0.63_0.05_154/0.12),transparent_55%)]" />
     </div>
   );
 }

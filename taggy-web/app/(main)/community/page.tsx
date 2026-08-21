@@ -78,7 +78,7 @@ export default function CommunityHubPage() {
                   >
                     <div className="min-w-0">
                       <div className="font-medium">{s.skill_name}</div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground/75">
                         Chat · channels · audio
                       </p>
                     </div>
@@ -119,7 +119,7 @@ export default function CommunityHubPage() {
                     >
                       <div className="min-w-0">
                         <div className="font-medium">{name}</div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-foreground/75">
                           {p.skill_slug} · {p.status ?? "ACTIVE"}
                         </p>
                       </div>

@@ -171,7 +171,7 @@ export default function SkillsPage() {
                         {Math.round(s.completion_percent)}%
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
+                    <p className="mt-0.5 text-sm text-foreground/75">
                       Roadmap v{s.roadmap_version_number} · {s.completed_count}/
                       {s.milestone_count} milestones
                     </p>
@@ -184,7 +184,7 @@ export default function SkillsPage() {
                       />
                     </div>
                   </div>
-                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                  <ArrowRight className="size-4 shrink-0 text-foreground/50" />
                 </Link>
               </li>
             ))}
@@ -302,7 +302,7 @@ export default function SkillsPage() {
                       ? "Roadmap already exists"
                       : "Similar skills already exist"}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground/75">
                     {similarMessage ??
                       (similarHardBlock
                         ? "A very similar skill roadmap is already in Taggy. Open it instead of creating a duplicate."
@@ -314,7 +314,7 @@ export default function SkillsPage() {
                         <Link href={`/skills/${s.slug}`} className="underline">
                           {s.name}
                         </Link>
-                        <span className="text-muted-foreground">
+                        <span className="text-foreground/75">
                           {" "}
                           · match {(s.score * 100).toFixed(0)}%
                         </span>

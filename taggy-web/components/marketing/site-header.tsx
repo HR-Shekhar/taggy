@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +10,6 @@ export function SiteHeader() {
         <BrandLogo size={32} wordmarkClassName="text-xl" />
       </Link>
       <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border/60 bg-background/55 p-1.5 shadow-sm backdrop-blur-md">
-        <ThemeToggle className="shrink-0" />
         <Link
           href="/login"
           className={cn(

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Antic, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { JetBrains_Mono, Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PageBackground } from "@/components/page-background";
@@ -7,10 +7,9 @@ import { Toaster } from "@/components/ui/sonner";
 import "@/styles/globals.css";
 import { cn } from "@/lib/utils";
 
-const antic = Antic({
-  weight: "400",
+const sourceSans = Source_Sans_3({
   subsets: ["latin"],
-  variable: "--font-antic",
+  variable: "--font-source-sans",
 });
 
 const sourceSerif = Source_Serif_4({
@@ -43,7 +42,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        antic.variable,
+        sourceSans.variable,
         sourceSerif.variable,
         jetbrains.variable,
         "font-sans"

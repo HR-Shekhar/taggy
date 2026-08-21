@@ -266,7 +266,7 @@ export function ChatPanel({
 
                 <div
                   className={cn(
-                    "mb-0.5 flex items-center gap-2 text-[11px] text-muted-foreground",
+                    "mb-0.5 flex items-center gap-2 text-[11px] text-foreground/60",
                     isMine && "justify-end"
                   )}
                 >
@@ -295,7 +295,7 @@ export function ChatPanel({
                       <span className="block text-[11px] font-semibold text-primary">
                         @{m.reply_to_author_username ?? "unknown"}
                       </span>
-                      <span className="mt-0.5 block line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+                      <span className="mt-0.5 block line-clamp-2 text-[11px] leading-snug text-foreground/60">
                         {truncateReply(m.reply_to_content ?? "Original message")}
                       </span>
                     </span>

@@ -294,7 +294,7 @@ export function AudioRoomProvider({ children }: { children: ReactNode }) {
           <Radio className="size-4 shrink-0 text-primary" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{room.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-foreground/75">
               Still in audio room
             </p>
           </div>
