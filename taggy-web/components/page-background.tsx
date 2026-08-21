@@ -44,7 +44,7 @@ export function PageBackground() {
       <div
         className={
           variant === "landing"
-            ? "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.28] [filter:brightness(1.45)_saturate(0.85)_sepia(0.12)_hue-rotate(35deg)] dark:opacity-[0.4] dark:[filter:brightness(0.95)_saturate(0.9)]"
+            ? "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.4] [filter:brightness(0.95)_saturate(0.9)]"
             : "absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.16] dark:opacity-[0.12]"
         }
         style={{ backgroundImage: `url(${src})` }}
@@ -52,7 +52,7 @@ export function PageBackground() {
       <div
         className={
           variant === "landing"
-            ? "absolute inset-0 bg-background/70 dark:bg-background/55"
+            ? "absolute inset-0 bg-background/55"
             : "absolute inset-0 bg-background/75 dark:bg-background/80"
         }
       />

@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { Hero } from "@/components/marketing/hero";
 import { Features, HowItWorks } from "@/components/marketing/features";
 import { CtaSection, SiteFooter } from "@/components/marketing/footer";
+import { ForceDark } from "@/components/marketing/force-dark";
 
 export default function LandingPage() {
   const { ready, isAuthenticated } = useAuth();
@@ -26,17 +27,19 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-x-clip bg-transparent">
-      <SiteHeader />
-      <main className="relative z-10 flex-1">
-        <Hero />
-        <HowItWorks />
-        <Features />
-        <CtaSection />
-      </main>
-      <div className="relative z-10">
-        <SiteFooter />
+    <ForceDark>
+      <div className="relative flex min-h-dvh flex-col overflow-x-clip bg-transparent">
+        <SiteHeader />
+        <main className="relative z-10 flex-1">
+          <Hero />
+          <HowItWorks />
+          <Features />
+          <CtaSection />
+        </main>
+        <div className="relative z-10">
+          <SiteFooter />
+        </div>
       </div>
-    </div>
+    </ForceDark>
   );
 }
