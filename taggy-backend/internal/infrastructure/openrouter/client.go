@@ -119,25 +119,33 @@ type chatResponse struct {
 
 // compactRoadmap is the AI contract: chapters with outcomes + timed subtopics.
 //
-//	{"topics":[{"name":"...","outcome":"...","subtopics":[{"name":"...","estimated_hours":2,"outcome":"..."}]}]}
+//	{"topics":[{"name":"...","outcome":"...","difficulty":"BEGINNER","subtopics":[{"name":"...","estimated_hours":2,"outcome":"...","difficulty":"BEGINNER"}]}]}
 type compactRoadmap struct {
 	Topics []compactTopic `json:"topics"`
 }
 
 type compactTopic struct {
-	Name      string            `json:"name"`
-	Outcome   string            `json:"outcome"`
-	Subtopics []compactSubtopic `json:"subtopics"`
+	Name       string            `json:"name"`
+	Outcome    string            `json:"outcome"`
+	Difficulty string            `json:"difficulty"`
+	Subtopics  []compactSubtopic `json:"subtopics"`
 }
 
 type compactSubtopic struct {
 	Name           string `json:"name"`
 	EstimatedHours int    `json:"estimated_hours"`
 	Outcome        string `json:"outcome"`
+	Difficulty     string `json:"difficulty"`
 }
 
 // SkillRequestEvaluation is the AI gate for whether a skill request is worth building.
 type SkillRequestEvaluation struct {
+	WorthConsidering bool   `json:"worth_considering"`
+	Reason           string `json:"reason"`
+}
+
+// RoadmapEditEvaluation judges whether an edit rationale is relevant to the skill.
+type RoadmapEditEvaluation struct {
 	WorthConsidering bool   `json:"worth_considering"`
 	Reason           string `json:"reason"`
 }
@@ -183,6 +191,48 @@ Reason must be one short sentence the requester can read.`
 	return ev, nil
 }
 
+// EvaluateRoadmapEdit judges whether a user's edit rationale is relevant and worth applying.
+func (c *Client) EvaluateRoadmapEdit(ctx context.Context, skillName, description, rationale string) (RoadmapEditEvaluation, error) {
+	if !c.Available() {
+		return RoadmapEditEvaluation{}, fmt.Errorf("ai api key not configured")
+	}
+	system := `You are Taggy's roadmap-edit reviewer. Decide if a user's suggested change is worth generating a new syllabus draft for admin review.
+Return ONLY one valid JSON object:
+{"worth_considering":true,"reason":"short plain reason"}
+
+Accept (worth_considering=true) when the rationale is a clear, relevant curriculum improvement for this skill (add missing topics, reorder, update for modern tools, fix gaps, change depth).
+
+Reject (worth_considering=false) when the rationale is spam, nonsense, empty/vague, unrelated to the skill, joke requests, illegal/adult content, or would not meaningfully improve the learning path.
+
+Reason must be one short sentence the requester (and admin) can read.`
+
+	user := fmt.Sprintf("Skill: %s\n", strings.TrimSpace(skillName))
+	if d := strings.TrimSpace(description); d != "" {
+		user += "Skill description: " + d + "\n"
+	}
+	user += "Edit rationale: " + strings.TrimSpace(rationale) + "\n"
+	user += "Return the JSON decision only."
+
+	raw, err := c.chatJSON(ctx, system, user)
+	if err != nil {
+		return RoadmapEditEvaluation{}, err
+	}
+	cleaned := repairJSON(raw)
+	var ev RoadmapEditEvaluation
+	if err := json.Unmarshal([]byte(cleaned), &ev); err != nil {
+		return RoadmapEditEvaluation{}, fmt.Errorf("parse edit evaluation json: %w", err)
+	}
+	ev.Reason = strings.TrimSpace(ev.Reason)
+	if ev.Reason == "" {
+		if ev.WorthConsidering {
+			ev.Reason = "Relevant curriculum improvement for this skill."
+		} else {
+			ev.Reason = "This edit suggestion does not look relevant or useful for this skill."
+		}
+	}
+	return ev, nil
+}
+
 // GenerateRoadmap asks for a followable syllabus (topics → timed subtopics + outcomes),
 // then flattens into CHAPTER + TOPIC milestones. currentOutline is optional context for edits.
 func (c *Client) GenerateRoadmap(
@@ -196,13 +246,20 @@ func (c *Client) GenerateRoadmap(
 	start := time.Now()
 	system := `You are Taggy's senior curriculum architect. Design a realistic, followable roadmap a motivated beginner can complete week by week — the quality bar of a great online course outline, not a keyword dump.
 Return ONLY one valid JSON object (strict JSON: no trailing commas, no comments, no markdown) matching:
-{"topics":[{"name":"Chapter name","outcome":"One sentence: what the learner can do after this chapter","subtopics":[{"name":"Lesson name","estimated_hours":2,"outcome":"One sentence lesson goal"}]}]}
+{"topics":[{"name":"Chapter name","outcome":"One sentence: what the learner can do after this chapter","difficulty":"BEGINNER","subtopics":[{"name":"Lesson name","estimated_hours":2,"outcome":"One sentence lesson goal","difficulty":"BEGINNER"}]}]}
 
 Audience & tone:
 - Absolute beginner → competent / job-ready or practically skilled
 - Plain human language; pair jargon with everyday words when needed
 - Order easiest → harder; each chapter assumes only prior chapters
 - Ban vague titles alone: "Basics", "Advanced", "Overview", "Introduction", "Misc", "Deep dive"
+
+Difficulty (required on every chapter and lesson — must vary across the course):
+- Exactly one of: BEGINNER, INTERMEDIATE, ADVANCED
+- Early foundation chapters/lessons: mostly BEGINNER
+- Mid course core skills: mostly INTERMEDIATE
+- Later projects, polish, and advanced tooling: INTERMEDIATE and ADVANCED
+- Do NOT label everything INTERMEDIATE — spread levels honestly along the path
 
 Structure (critical):
 - 10–14 chapters covering foundations → core skills → practice → tooling → polish
@@ -233,7 +290,7 @@ Structure (critical):
 	outline, err := parseCompactRoadmap(raw)
 	if err != nil {
 		c.log.Warn().Err(err).Str("snippet", truncate(raw, 500)).Msg("ai compact roadmap parse failed; retrying")
-		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Subtopics must be objects with name, estimated_hours, outcome.")
+		raw, err = c.chatJSON(ctx, system, user+"\nImportant: strict JSON only — no trailing commas. Subtopics must be objects with name, estimated_hours, outcome, difficulty (BEGINNER|INTERMEDIATE|ADVANCED).")
 		if err != nil {
 			return nil, err
 		}
@@ -482,6 +539,47 @@ func clampHours(h int) int {
 	return h
 }
 
+// normalizeDifficulty maps AI output to BEGINNER | INTERMEDIATE | ADVANCED.
+func normalizeDifficulty(raw string, fallback string) string {
+	s := strings.ToUpper(strings.TrimSpace(raw))
+	s = strings.ReplaceAll(s, " ", "_")
+	switch s {
+	case "BEGINNER", "EASY", "INTRO", "INTRODUCTORY", "BASIC", "FUNDAMENTALS":
+		return "BEGINNER"
+	case "ADVANCED", "HARD", "EXPERT", "ADVANCED_LEVEL":
+		return "ADVANCED"
+	case "INTERMEDIATE", "MEDIUM", "MID":
+		return "INTERMEDIATE"
+	}
+	fb := strings.ToUpper(strings.TrimSpace(fallback))
+	switch fb {
+	case "BEGINNER", "INTERMEDIATE", "ADVANCED":
+		return fb
+	}
+	return "INTERMEDIATE"
+}
+
+// chapterDifficultyFromSubs picks the chapter label from its lessons (mode, then hardest).
+func chapterDifficultyFromSubs(subs []compactSubtopic, topicFallback string) string {
+	counts := map[string]int{"BEGINNER": 0, "INTERMEDIATE": 0, "ADVANCED": 0}
+	for _, s := range subs {
+		d := normalizeDifficulty(s.Difficulty, topicFallback)
+		counts[d]++
+	}
+	best := normalizeDifficulty(topicFallback, "INTERMEDIATE")
+	bestN := -1
+	for _, d := range []string{"BEGINNER", "INTERMEDIATE", "ADVANCED"} {
+		if counts[d] > bestN {
+			bestN = counts[d]
+			best = d
+		}
+	}
+	if bestN <= 0 {
+		return normalizeDifficulty(topicFallback, "INTERMEDIATE")
+	}
+	return best
+}
+
 func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 	out := make([]MilestoneDraft, 0, MaxMilestones)
 	seenSlug := map[string]struct{}{}
@@ -491,13 +589,36 @@ func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 		topics = topics[:maxTopics]
 	}
 
-	for _, t := range topics {
+	for topicPos, t := range topics {
 		if len(out) >= MaxMilestones {
 			break
 		}
 		name := strings.TrimSpace(t.Name)
 		if name == "" {
 			continue
+		}
+
+		// Progressive default if AI omits difficulty: early BEGINNER → mid INTERMEDIATE → late ADVANCED
+		progressFallback := "INTERMEDIATE"
+		fracDenom := len(topics) - 1
+		if fracDenom < 1 {
+			fracDenom = 1
+		}
+		frac := float64(topicPos) / float64(fracDenom)
+		if frac < 0.34 {
+			progressFallback = "BEGINNER"
+		} else if frac > 0.72 {
+			progressFallback = "ADVANCED"
+		}
+
+		subs := t.Subtopics
+		if len(subs) > maxSubtopicsPerTopic {
+			subs = subs[:maxSubtopicsPerTopic]
+		}
+
+		chapterDiff := normalizeDifficulty(t.Difficulty, progressFallback)
+		if strings.TrimSpace(t.Difficulty) == "" {
+			chapterDiff = chapterDifficultyFromSubs(subs, progressFallback)
 		}
 
 		chapterIdx := len(out)
@@ -508,19 +629,15 @@ func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 			Description:    chapterOutcome,
 			EstimatedHours: 1, // replaced after summing subtopics
 			OrderIndex:     chapterIdx + 1,
-			Difficulty:     "INTERMEDIATE",
+			Difficulty:     chapterDiff,
 			Slug:           chapterSlug,
 			Chapter:        name,
 			Kind:           "CHAPTER",
 		})
 
-		subs := t.Subtopics
-		if len(subs) > maxSubtopicsPerTopic {
-			subs = subs[:maxSubtopicsPerTopic]
-		}
 		chapterHours := 0
 		addedSubs := 0
-		for _, rawSub := range subs {
+		for subPos, rawSub := range subs {
 			if len(out) >= MaxMilestones {
 				break
 			}
@@ -532,13 +649,30 @@ func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 			if rawSub.EstimatedHours <= 0 {
 				hours = 2
 			}
+			subFallback := chapterDiff
+			if strings.TrimSpace(rawSub.Difficulty) == "" && len(subs) > 1 {
+				denom := len(subs) - 1
+				if denom < 1 {
+					denom = 1
+				}
+				subFrac := float64(subPos) / float64(denom)
+				if subFrac < 0.33 {
+					subFallback = normalizeDifficulty(chapterDiff, "BEGINNER")
+					if chapterDiff == "ADVANCED" {
+						subFallback = "INTERMEDIATE"
+					}
+				} else if subFrac > 0.66 && chapterDiff != "BEGINNER" {
+					subFallback = chapterDiff
+				}
+			}
+			subDiff := normalizeDifficulty(rawSub.Difficulty, subFallback)
 			subSlug := uniqueSlug(slugify(sub), "topic", seenSlug)
 			out = append(out, MilestoneDraft{
 				Title:          sub,
 				Description:    strings.TrimSpace(rawSub.Outcome),
 				EstimatedHours: hours,
 				OrderIndex:     len(out) + 1,
-				Difficulty:     "INTERMEDIATE",
+				Difficulty:     subDiff,
 				Slug:           subSlug,
 				Chapter:        name,
 				Kind:           "TOPIC",
@@ -553,7 +687,6 @@ func flattenCompactRoadmap(outline compactRoadmap) []MilestoneDraft {
 			chapterHours = 1
 		}
 		out[chapterIdx].EstimatedHours = chapterHours
-		// Re-number order indexes are already sequential via append.
 	}
 	return out
 }

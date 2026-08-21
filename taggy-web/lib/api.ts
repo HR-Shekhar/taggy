@@ -771,6 +771,7 @@ export async function createSkillRequest(body: {
 }) {
   return api<{
     requires_confirm?: boolean;
+    already_exists?: boolean;
     similar?: SimilarSkill[];
     message?: string;
     request?: SkillCreationRequest;

@@ -17,6 +17,7 @@ type similarResponse struct {
 
 type createResponse struct {
 	RequiresConfirm bool           `json:"requires_confirm,omitempty"`
+	AlreadyExists   bool           `json:"already_exists,omitempty"`
 	Similar         []SimilarSkill `json:"similar,omitempty"`
 	Request         *RequestView   `json:"request,omitempty"`
 	Message         string         `json:"message,omitempty"`

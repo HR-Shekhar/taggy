@@ -54,6 +54,8 @@ export default function SkillsPage() {
   const [reqName, setReqName] = useState("");
   const [reqDesc, setReqDesc] = useState("");
   const [similar, setSimilar] = useState<SimilarSkill[] | null>(null);
+  const [similarHardBlock, setSimilarHardBlock] = useState(false);
+  const [similarMessage, setSimilarMessage] = useState<string | null>(null);
   const [reqBusy, setReqBusy] = useState(false);
 
   async function load() {
@@ -82,18 +84,42 @@ export default function SkillsPage() {
   async function submitSkillRequest(force: boolean) {
     setReqBusy(true);
     setSimilar(null);
+    setSimilarHardBlock(false);
+    setSimilarMessage(null);
     const res = await createSkillRequest({
       name: reqName.trim(),
       description: reqDesc.trim() || undefined,
       force,
     });
     setReqBusy(false);
+
+    // Near-duplicate: backend returns 409 with similar skills listed
+    if (!res.ok && res.status === 409) {
+      const data = res.data as {
+        already_exists?: boolean;
+        similar?: SimilarSkill[];
+        message?: string;
+      };
+      setSimilar(data?.similar ?? []);
+      setSimilarHardBlock(true);
+      setSimilarMessage(
+        data?.message ??
+          "A roadmap for a very similar skill already exists. Open it instead."
+      );
+      return;
+    }
+
     if (!res.ok) {
       toastApiError(res, "Couldn't submit request");
       return;
     }
     if (res.data?.requires_confirm) {
       setSimilar(res.data.similar ?? []);
+      setSimilarHardBlock(false);
+      setSimilarMessage(
+        res.data.message ??
+          "Similar skills found. Review them, or confirm if you still want a new roadmap."
+      );
       return;
     }
     const count = res.data?.request?.draft_milestones?.length ?? 0;
@@ -101,16 +127,17 @@ export default function SkillsPage() {
     setReqName("");
     setReqDesc("");
     setSimilar(null);
+    setSimilarMessage(null);
     if (status === "GENERATING") {
       toastSuccess(
-        "AI is drafting your roadmap in the background (this can take several minutes). Check My requests or notifications when it's ready.",
+        "AI is drafting your roadmap in the background (this can take several minutes). It will go to admin review when ready — check My requests or notifications.",
         "Generating roadmap"
       );
       return;
     }
     toastSuccess(
       count > 0
-        ? `Your skill request was drafted with ${count} milestones (topics + subtopics) and is pending admin review.`
+        ? `Your skill request was drafted with ${count} milestones and is pending admin review.`
         : "Your skill request was submitted and is pending admin review.",
       "Roadmap draft ready"
     );
@@ -271,10 +298,15 @@ export default function SkillsPage() {
               {similar && similar.length > 0 ? (
                 <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
                   <p className="text-sm font-medium">
-                    Similar skills already exist
+                    {similarHardBlock
+                      ? "Roadmap already exists"
+                      : "Similar skills already exist"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Review these first, or confirm if you still want a new skill.
+                    {similarMessage ??
+                      (similarHardBlock
+                        ? "A very similar skill roadmap is already in Taggy. Open it instead of creating a duplicate."
+                        : "Review these first, or confirm if you still want a new skill.")}
                   </p>
                   <ul className="space-y-1 text-sm">
                     {similar.map((s) => (
@@ -284,19 +316,21 @@ export default function SkillsPage() {
                         </Link>
                         <span className="text-muted-foreground">
                           {" "}
-                          · score {s.score.toFixed(2)}
+                          · match {(s.score * 100).toFixed(0)}%
                         </span>
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={reqBusy || reqName.trim().length < 3}
-                    onClick={() => void submitSkillRequest(true)}
-                  >
-                    Submit anyway
-                  </Button>
+                  {!similarHardBlock ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={reqBusy || reqName.trim().length < 3}
+                      onClick={() => void submitSkillRequest(true)}
+                    >
+                      Submit anyway
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
               <div className="flex flex-wrap gap-2">

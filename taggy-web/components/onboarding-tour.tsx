@@ -27,7 +27,9 @@ export type TourStepId =
   | "skills_waiting"
   | "pods_join_or_create"
   | "pods_waiting"
-  | "pod_features"
+  | "pod_chat"
+  | "pod_audio"
+  | "pod_quiz"
   | "community_leaderboards"
   | "done";
 
@@ -37,81 +39,114 @@ const STEP_ORDER: TourStepId[] = [
   "skills_waiting",
   "pods_join_or_create",
   "pods_waiting",
-  "pod_features",
+  "pod_chat",
+  "pod_audio",
+  "pod_quiz",
   "community_leaderboards",
   "done",
 ];
+
+/** Map legacy step ids from earlier tours */
+function normalizeStepId(raw: string): TourStepId | null {
+  if (raw === "pod_features") return "pod_chat";
+  if (STEP_ORDER.includes(raw as TourStepId)) return raw as TourStepId;
+  return null;
+}
 
 type StepDef = {
   id: TourStepId;
   title: string;
   body: string;
   href?: string;
-  /** Preferred data-tour targets (first match in DOM wins) */
   targets: string[];
   ctaLabel: string;
+  /** Force tip to corner so large feature cards stay fully visible */
+  tipCorner?: "bottom-right" | "auto";
 };
 
 const STEPS: Record<TourStepId, StepDef> = {
   home_overview: {
     id: "home_overview",
     title: "Your Home hub",
-    body: "From here you continue skills, check streaks, search, and jump into pods. Next, open Skills in the sidebar (or tap below) to join or request a roadmap.",
+    body: "This whole area is your dashboard — continue skills, streaks, search, and shortcuts. Click Go to Skills when you’re ready.",
     href: "/home",
-    targets: ["home-cta", "nav-home", "home-main"],
+    targets: ["home-main", "home-cta", "nav-home"],
     ctaLabel: "Go to Skills",
+    tipCorner: "bottom-right",
   },
   skills_join_or_request: {
     id: "skills_join_or_request",
     title: "Join or request a skill",
-    body: "Click Join on a catalog skill, or use Request a new skill below to generate a roadmap for something you want to learn.",
+    body: "Use the catalog cards to Join a skill, or the request form to generate a roadmap. Click a Join button or fill the request form.",
     href: "/skills",
-    targets: ["skills-request", "skills-catalog", "nav-skills", "skills-page"],
+    targets: ["skills-catalog", "skills-request", "skills-page", "nav-skills"],
     ctaLabel: "Continue",
+    tipCorner: "bottom-right",
   },
   skills_waiting: {
     id: "skills_waiting",
     title: "Enroll to keep going",
-    body: "Join a skill (or wait for your request to be approved). Click a Join button on this page — this tip advances once you have a skill.",
+    body: "Click Join on a skill card (or wait for your request). This tip moves on once you have at least one skill.",
     href: "/skills",
     targets: ["skills-catalog", "nav-skills", "skills-page"],
     ctaLabel: "I’ve joined — continue",
+    tipCorner: "bottom-right",
   },
   pods_join_or_create: {
     id: "pods_join_or_create",
-    title: "Find your pod",
-    body: "Click Pods in the sidebar, then join an open pod or create one for your skill so you can chat and study together.",
+    title: "Find or create a pod",
+    body: "Browse pods for your skill, Join one, or Create pod. After you’re in a pod we’ll walk through chat, audio, and quizzes.",
     href: "/pods",
-    targets: ["pods-create", "pods-page", "nav-pods"],
+    targets: ["pods-page", "pods-create", "nav-pods"],
     ctaLabel: "Continue",
+    tipCorner: "bottom-right",
   },
   pods_waiting: {
     id: "pods_waiting",
-    title: "Join or create a pod",
-    body: "Use Join / Create on this page. Once you’re accepted into a pod, we’ll open it and show what’s inside.",
+    title: "Get into a pod",
+    body: "Join or create a pod on this page. Once accepted, we’ll open it and explore chat, audio rooms, and quizzes together.",
     href: "/pods",
-    targets: ["pods-create", "pods-page", "nav-pods"],
+    targets: ["pods-page", "pods-create", "nav-pods"],
     ctaLabel: "I’m in a pod — continue",
+    tipCorner: "bottom-right",
   },
-  pod_features: {
-    id: "pod_features",
-    title: "Inside your pod",
-    body: "Use chat, start audio rooms, manage members, and try the pod quiz/leaderboard. Click around here — then continue to Community.",
-    targets: ["pod-workspace", "nav-pods"],
+  pod_chat: {
+    id: "pod_chat",
+    title: "Pod chat",
+    body: "This is your pod chatroom — send messages, reply, and stay accountable. Try typing a hello, then continue to audio rooms.",
+    targets: ["pod-chat", "pod-workspace"],
+    ctaLabel: "Next: audio rooms",
+    tipCorner: "bottom-right",
+  },
+  pod_audio: {
+    id: "pod_audio",
+    title: "Live audio rooms",
+    body: "Create or join an audio room from this panel to study together live. Click Create room (or open an existing one), then continue.",
+    targets: ["pod-audio", "pod-audio-panel", "pod-audio-mobile", "pod-workspace"],
+    ctaLabel: "Next: quizzes",
+    tipCorner: "bottom-right",
+  },
+  pod_quiz: {
+    id: "pod_quiz",
+    title: "Quizzes & leaderboard",
+    body: "Pod quizzes and leaderboards live here. Open Take quiz on Progress when you want to compete — then we’ll visit Community.",
+    targets: ["pod-quiz", "pod-members", "pod-workspace"],
     ctaLabel: "Go to Community",
+    tipCorner: "bottom-right",
   },
   community_leaderboards: {
     id: "community_leaderboards",
-    title: "Community & leaderboards",
-    body: "Click a skill community to open channels. Leaderboards also show on Home and inside pods — open Community from the sidebar anytime.",
+    title: "Community channels",
+    body: "Open a skill community for wider chat channels. Leaderboards also appear on Home and in pods — click a community card to explore.",
     href: "/community",
     targets: ["community-page", "nav-community"],
     ctaLabel: "Finish tour",
+    tipCorner: "bottom-right",
   },
   done: {
     id: "done",
     title: "You’re set",
-    body: "Path to remember: skill → roadmap → pod → community. Click Home when you’re ready to start learning.",
+    body: "You covered Home → Skills → Pods (chat, audio, quiz) → Community. Click Home whenever you want to continue learning.",
     href: "/home",
     targets: ["nav-home", "home-cta"],
     ctaLabel: "Go to Home",
@@ -152,8 +187,8 @@ function readStep(username: string): TourStepId | null {
   const raw =
     window.localStorage.getItem(stepKey(username)) ??
     window.localStorage.getItem(ONBOARDING_STEP_KEY);
-  if (raw && STEP_ORDER.includes(raw as TourStepId)) return raw as TourStepId;
-  return null;
+  if (!raw) return null;
+  return normalizeStepId(raw);
 }
 
 function writeStep(username: string, id: TourStepId) {
@@ -205,14 +240,16 @@ function useTargetRect(targets: string[], active: boolean) {
       return;
     }
     const r = el.getBoundingClientRect();
-    // Cap spotlight size so giant page wrappers don't swallow the UI
-    const maxW = Math.min(r.width, Math.min(420, window.innerWidth - 32));
-    const maxH = Math.min(r.height, Math.min(280, window.innerHeight - 32));
+    // Full feature card — only clamp to the visible viewport
+    const top = Math.max(8, r.top);
+    const left = Math.max(8, r.left);
+    const right = Math.min(window.innerWidth - 8, r.right);
+    const bottom = Math.min(window.innerHeight - 8, r.bottom);
     setRect({
-      top: r.top,
-      left: r.left,
-      width: maxW,
-      height: maxH,
+      top,
+      left,
+      width: Math.max(40, right - left),
+      height: Math.max(40, bottom - top),
     });
   }, [targets, active]);
 
@@ -238,17 +275,35 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-function tipPosition(rect: SpotlightRect | null): CSSProperties {
+function tipPosition(
+  rect: SpotlightRect | null,
+  corner?: "bottom-right" | "auto"
+): CSSProperties {
   const tipW = Math.min(352, window.innerWidth - 24);
-  const tipH = 240;
+  const tipH = 260;
   const margin = 12;
 
-  if (!rect) {
+  if (!rect || corner === "bottom-right") {
     return {
       position: "fixed",
       right: margin,
       bottom: margin,
       width: tipW,
+      maxHeight: "min(70vh, 22rem)",
+    };
+  }
+
+  const large =
+    rect.width * rect.height > window.innerWidth * window.innerHeight * 0.28 ||
+    rect.width > 380;
+
+  if (large) {
+    return {
+      position: "fixed",
+      right: margin,
+      bottom: margin,
+      width: tipW,
+      maxHeight: "min(70vh, 22rem)",
     };
   }
 
@@ -258,7 +313,6 @@ function tipPosition(rect: SpotlightRect | null): CSSProperties {
   let top: number;
   let left: number;
 
-  // Prefer to the right of sidebar-sized targets
   if (spaceRight > tipW + 24 && rect.width < 280) {
     left = rect.left + rect.width + 14;
     top = rect.top;
@@ -266,7 +320,6 @@ function tipPosition(rect: SpotlightRect | null): CSSProperties {
     left = rect.left;
     top = rect.top + rect.height + 14;
   } else {
-    // Place above or pinned to lower viewport
     left = rect.left;
     top = rect.top - tipH - 14;
   }
@@ -279,6 +332,7 @@ function tipPosition(rect: SpotlightRect | null): CSSProperties {
     top,
     left,
     width: tipW,
+    maxHeight: "min(70vh, 22rem)",
   };
 }
 
@@ -301,7 +355,10 @@ function Coachmark({
 }) {
   const rect = useTargetRect(step.targets, true);
   const pad = 6;
-  const style = useMemo(() => tipPosition(rect), [rect]);
+  const style = useMemo(
+    () => tipPosition(rect, step.tipCorner),
+    [rect, step.tipCorner]
+  );
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[55] overflow-hidden">
@@ -364,6 +421,8 @@ function Coachmark({
     </div>
   );
 }
+
+const POD_EXPLORE_STEPS: TourStepId[] = ["pod_chat", "pod_audio", "pod_quiz"];
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { username, ready } = useAuth();
@@ -512,37 +571,41 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       goToStep("pods_join_or_create");
     }
     if (stepId === "pods_waiting" && podCount > 0) {
-      goToStep("pod_features");
+      goToStep("pod_chat");
     }
   }, [active, stepId, skillCount, podCount, goToStep]);
 
   const step = stepId ? STEPS[stepId] : null;
 
+  const inPodDetail = /^\/pods\/[^/]+/.test(pathname);
+
   const onPreferredRoute = useMemo(() => {
     if (!step) return true;
-    if (step.id === "pod_features") return /^\/pods\/[^/]+/.test(pathname);
+    if (POD_EXPLORE_STEPS.includes(step.id)) return inPodDetail;
     if (step.id === "skills_waiting") return pathname.startsWith("/skills");
     if (step.id === "pods_waiting") return pathname.startsWith("/pods");
     if (!step.href) return true;
     if (step.href === "/home") return pathname === "/home";
     return pathname === step.href || pathname.startsWith(`${step.href}/`);
-  }, [step, pathname]);
+  }, [step, pathname, inPodDetail]);
 
   const goThere = useCallback(() => {
     if (!step) return;
-    if (step.id === "pod_features") {
+    if (POD_EXPLORE_STEPS.includes(step.id)) {
       router.push(acceptedPodSlug ? `/pods/${acceptedPodSlug}` : "/pods");
       return;
     }
     if (step.href) router.push(step.href);
   }, [step, acceptedPodSlug, router]);
 
+  // Keep user inside a pod while exploring chat / audio / quiz
   useEffect(() => {
-    if (!active || stepId !== "pod_features") return;
-    if (!/^\/pods\/[^/]+/.test(pathname) && acceptedPodSlug) {
+    if (!active || !stepId) return;
+    if (!POD_EXPLORE_STEPS.includes(stepId)) return;
+    if (!inPodDetail && acceptedPodSlug) {
       router.push(`/pods/${acceptedPodSlug}`);
     }
-  }, [active, stepId, pathname, acceptedPodSlug, router]);
+  }, [active, stepId, inPodDetail, acceptedPodSlug, router]);
 
   const value = useMemo(
     () => ({ active, stepId, skip, next, goToStep }),
@@ -572,15 +635,30 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
               return;
             }
             if (step.id === "skills_join_or_request") {
-              goToStep(skillCount > 0 ? "pods_join_or_create" : "skills_waiting");
+              goToStep(
+                skillCount > 0 ? "pods_join_or_create" : "skills_waiting"
+              );
               if (skillCount > 0) router.push("/pods");
               return;
             }
             if (step.id === "pods_join_or_create") {
-              goToStep(podCount > 0 ? "pod_features" : "pods_waiting");
+              if (podCount > 0) {
+                goToStep("pod_chat");
+                if (acceptedPodSlug) router.push(`/pods/${acceptedPodSlug}`);
+              } else {
+                goToStep("pods_waiting");
+              }
               return;
             }
-            if (step.id === "pod_features") {
+            if (step.id === "pod_chat") {
+              goToStep("pod_audio");
+              return;
+            }
+            if (step.id === "pod_audio") {
+              goToStep("pod_quiz");
+              return;
+            }
+            if (step.id === "pod_quiz") {
               goToStep("community_leaderboards");
               router.push("/community");
               return;

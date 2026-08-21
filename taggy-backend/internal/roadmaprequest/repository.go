@@ -95,6 +95,13 @@ func (r *Repository) FailGenerating(ctx context.Context, id int64, note string) 
 	})
 }
 
+func (r *Repository) AutoRejectGenerating(ctx context.Context, id int64, note string) (sqlc.RoadmapEditRequest, error) {
+	return r.queries.AutoRejectGeneratingRoadmapEditRequest(ctx, sqlc.AutoRejectGeneratingRoadmapEditRequestParams{
+		ID:        id,
+		AdminNote: pgtype.Text{String: note, Valid: note != ""},
+	})
+}
+
 func (r *Repository) ListByRequester(ctx context.Context, requesterID int64, limit int32) ([]sqlc.ListRoadmapEditRequestsByRequesterRow, error) {
 	return r.queries.ListRoadmapEditRequestsByRequester(ctx, sqlc.ListRoadmapEditRequestsByRequesterParams{
 		RequesterID: requesterID,

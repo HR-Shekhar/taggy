@@ -264,7 +264,7 @@ export default function PodDetailPage() {
         left={
           <div className="flex min-h-0 flex-1 flex-col">
             <ChatSidebarSection title="Members">
-              <ul className="space-y-1">
+              <ul className="space-y-1" data-tour="pod-members">
                 {members.map((m) => (
                   <li
                     key={m.username}
@@ -317,7 +317,7 @@ export default function PodDetailPage() {
               title="Leaderboard"
               className="border-t border-border/60"
             >
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="pod-quiz">
                 <PodQuizPanel
                   podSlug={podSlug}
                   enabled={isMember}

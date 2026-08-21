@@ -144,7 +144,7 @@ export function ChatWorkspace({
           </aside>
         ) : null}
 
-        <section className="flex min-w-0 flex-1 flex-col">
+        <section className="flex min-w-0 flex-1 flex-col" data-tour="pod-chat">
           <ChatPanel
             messages={messages}
             empty={empty ?? <Empty>No messages yet.</Empty>}
@@ -214,6 +214,7 @@ export function ChatWorkspace({
         </section>
 
         <aside
+          data-tour="pod-audio"
           className={cn(
             "hidden shrink-0 flex-col overflow-hidden border-l border-border bg-card transition-[width] duration-300 ease-out lg:flex",
             rightOpen ? "w-64 xl:w-72" : "w-11"
@@ -241,7 +242,10 @@ export function ChatWorkspace({
       </div>
 
       {/* Mobile / tablet audio strip */}
-      <div className="max-h-52 shrink-0 overflow-y-auto border-t border-border bg-card lg:hidden">
+      <div
+        data-tour="pod-audio-mobile"
+        className="max-h-52 shrink-0 overflow-y-auto border-t border-border bg-card lg:hidden"
+      >
         {audio}
       </div>
     </div>
@@ -298,7 +302,7 @@ export function AudioRoomsSidebar({
       title="Audio rooms"
       description="Start or join a live call."
     >
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="pod-audio-panel">
         {canCreate ? (
           <form
             className="space-y-2"

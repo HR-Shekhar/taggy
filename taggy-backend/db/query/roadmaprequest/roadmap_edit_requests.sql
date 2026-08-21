@@ -117,6 +117,18 @@ WHERE id = $1
 RETURNING *;
 
 
+-- name: AutoRejectGeneratingRoadmapEditRequest :one
+UPDATE roadmap_edit_request
+SET status = 'REJECTED',
+    reviewed_by = NULL,
+    reviewed_at = NOW(),
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING *;
+
+
 -- name: GetPendingRoadmapEditByRequesterAndSkill :one
 SELECT *
 FROM roadmap_edit_request

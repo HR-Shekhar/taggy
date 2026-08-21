@@ -26,6 +26,8 @@ type CreateResult struct {
 	Request         RequestView
 	Similar         []SimilarSkill
 	RequiresConfirm bool
+	AlreadyExists   bool
+	Message         string
 }
 
 type RequestView struct {

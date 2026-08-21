@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	similarMinScore float32 = 0.3
-	similarLimit    int32   = 5
-	defaultListLimit int32  = 50
+	similarMinScore      float32 = 0.3  // soft confirm (force allowed)
+	similarHardBlockScore float32 = 0.72 // near-duplicate: roadmap already exists
+	similarLimit         int32   = 5
+	defaultListLimit     int32   = 50
 )
 
 type Generator interface {
@@ -103,22 +104,48 @@ func (s *Service) Create(ctx context.Context, userPublicID uuid.UUID, input Crea
 		return CreateResult{}, logging.Unexpected(s.log, err, "create skill request: similar search failed")
 	}
 	similar := mapSimilar(similarRows)
+
+	// Hard block: name is nearly identical to an existing skill — don't generate a duplicate roadmap.
+	var nearDupes []SimilarSkill
+	for _, sRow := range similar {
+		if sRow.Score >= similarHardBlockScore {
+			nearDupes = append(nearDupes, sRow)
+		}
+	}
+	if len(nearDupes) > 0 {
+		return CreateResult{
+			Similar:       nearDupes,
+			AlreadyExists: true,
+			Message:       "A roadmap for a very similar skill already exists. Open the existing skill instead of creating a duplicate.",
+		}, nil
+	}
+
 	if len(similar) > 0 && !input.Force {
 		return CreateResult{
 			Similar:         similar,
 			RequiresConfirm: true,
+			Message:         "Similar skills found. Review them, or confirm if you still want a new roadmap.",
 		}, nil
 	}
 
 	slug := slugify(name)
 	if existing, err := s.repo.GetSkillBySlug(ctx, slug); err == nil && existing.ID > 0 {
-		if !input.Force {
-			return CreateResult{
-				Similar:         similar,
-				RequiresConfirm: true,
-			}, nil
+		desc := (*string)(nil)
+		if existing.Description.Valid {
+			d := existing.Description.String
+			desc = &d
 		}
-		slug = fmt.Sprintf("%s-%d", slug, time.Now().Unix()%10000)
+		return CreateResult{
+			Similar: []SimilarSkill{{
+				ID:          existing.ID,
+				Name:        existing.Name,
+				Slug:        existing.Slug,
+				Description: desc,
+				Score:       1,
+			}},
+			AlreadyExists: true,
+			Message:       "A roadmap for this skill already exists. Open the existing skill instead of creating a duplicate.",
+		}, nil
 	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return CreateResult{}, logging.Unexpected(s.log, err, "create skill request: slug check failed")
 	}
@@ -266,18 +293,14 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		return
 	}
 
-	if _, err := s.approvePending(context.WithoutCancel(ctx), updated, 0, "Auto-approved after AI review"); err != nil {
-		s.log.Error().Err(err).Int64("id", id).Msg("auto-approve skill request failed; left pending for admin")
-		if s.notifier != nil {
-			s.notifier.NotifySkillRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.Name)
-		}
-		return
+	// Leave PENDING for admin review (do not auto-approve).
+	if s.notifier != nil {
+		s.notifier.NotifySkillRequestReady(context.WithoutCancel(ctx), updated.RequesterID, updated.Name)
 	}
-
 	s.log.Info().
 		Str("request_id", updated.PublicID.String()).
 		Int("milestones", len(drafts)).
-		Msg("skill creation request generated and auto-approved")
+		Msg("skill creation draft ready for admin review")
 }
 
 func (s *Service) ListMine(ctx context.Context, userPublicID uuid.UUID) ([]RequestView, error) {

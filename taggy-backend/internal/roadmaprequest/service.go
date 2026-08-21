@@ -23,6 +23,7 @@ const defaultListLimit int32 = 50
 
 type Generator interface {
 	Available() bool
+	EvaluateRoadmapEdit(ctx context.Context, skillName, description, rationale string) (openrouter.RoadmapEditEvaluation, error)
 	GenerateRoadmap(ctx context.Context, skillName, description, rationale, currentOutline string) ([]openrouter.MilestoneDraft, error)
 }
 
@@ -181,13 +182,46 @@ func (s *Service) generateDraft(ctx context.Context, id int64) {
 		s.failRequest(ctx, id, req.RequesterID, req.SkillSlug, "AI generation failed; please submit again")
 		return
 	}
+	rationale := ""
+	if req.Rationale.Valid {
+		rationale = req.Rationale.String
+	}
+
 	desc := ""
 	if skill.Description.Valid {
 		desc = skill.Description.String
 	}
-	rationale := ""
-	if req.Rationale.Valid {
-		rationale = req.Rationale.String
+
+	eval, err := s.generator.EvaluateRoadmapEdit(ctx, skill.Name, desc, rationale)
+	if err != nil {
+		s.log.Warn().Err(err).Int64("id", id).Str("skill", req.SkillSlug).Msg("roadmap edit evaluation failed")
+		note := "AI review failed; please submit again"
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			note = "AI review timed out; please submit again"
+		}
+		s.failRequest(ctx, id, req.RequesterID, req.SkillSlug, note)
+		return
+	}
+	if !eval.WorthConsidering {
+		reason := eval.Reason
+		if reason == "" {
+			reason = "This edit suggestion does not look relevant or useful for this skill."
+		}
+		bg := context.WithoutCancel(ctx)
+		updated, rerr := s.repo.AutoRejectGenerating(bg, id, reason)
+		if rerr != nil && !errors.Is(rerr, pgx.ErrNoRows) {
+			s.log.Error().Err(rerr).Int64("id", id).Msg("auto-reject roadmap edit failed")
+			return
+		}
+		if s.notifier != nil && rerr == nil {
+			s.notifier.NotifyRoadmapRequestRejected(bg, updated.RequesterID, req.SkillSlug, reason)
+		}
+		s.log.Info().
+			Str("request_id", req.PublicID.String()).
+			Str("skill", req.SkillSlug).
+			Str("reason", reason).
+			Msg("roadmap edit request auto-rejected")
+		return
 	}
 
 	currentOutline := ""

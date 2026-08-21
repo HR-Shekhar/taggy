@@ -58,12 +58,28 @@ func (h *Handler) Create(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	if result.AlreadyExists {
+		log.Info().Str("name", req.Name).Int("similar", len(result.Similar)).Msg("skill request blocked: near-duplicate exists")
+		msg := result.Message
+		if msg == "" {
+			msg = "A roadmap for a very similar skill already exists."
+		}
+		return c.JSON(http.StatusConflict, createResponse{
+			AlreadyExists: true,
+			Similar:       result.Similar,
+			Message:       msg,
+		})
+	}
 	if result.RequiresConfirm {
 		log.Info().Str("name", req.Name).Int("similar", len(result.Similar)).Msg("skill request requires confirm")
+		msg := result.Message
+		if msg == "" {
+			msg = "Similar skills found. Review them or confirm to continue."
+		}
 		return c.JSON(http.StatusOK, createResponse{
 			RequiresConfirm: true,
 			Similar:         result.Similar,
-			Message:         "Similar skills found. Review them or resubmit with force=true.",
+			Message:         msg,
 		})
 	}
 	log.Info().Str("request_id", result.Request.ID).Msg("skill request accepted for generation")

@@ -6,6 +6,7 @@ var (
 	ErrInvalidName       = errors.New("skill name is invalid")
 	ErrInvalidDescription = errors.New("skill description is invalid")
 	ErrSimilarFound      = errors.New("similar skills found; set force=true to continue")
+	ErrNearDuplicate     = errors.New("a very similar skill roadmap already exists")
 	ErrDuplicatePending  = errors.New("a pending request for this skill name already exists")
 	ErrRequestNotFound   = errors.New("skill creation request not found")
 	ErrNotPending        = errors.New("request is not pending")

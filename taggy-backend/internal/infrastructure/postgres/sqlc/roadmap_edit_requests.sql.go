@@ -59,6 +59,45 @@ func (q *Queries) ApproveRoadmapEditRequest(ctx context.Context, arg ApproveRoad
 	return i, err
 }
 
+const autoRejectGeneratingRoadmapEditRequest = `-- name: AutoRejectGeneratingRoadmapEditRequest :one
+UPDATE roadmap_edit_request
+SET status = 'REJECTED',
+    reviewed_by = NULL,
+    reviewed_at = NOW(),
+    admin_note = $2,
+    updated_at = NOW()
+WHERE id = $1
+  AND status = 'GENERATING'
+RETURNING id, public_id, skill_id, requester_id, rationale, status, base_version_number, draft_milestones, admin_note, reviewed_by, reviewed_at, created_version_id, created_at, updated_at
+`
+
+type AutoRejectGeneratingRoadmapEditRequestParams struct {
+	ID        int64
+	AdminNote pgtype.Text
+}
+
+func (q *Queries) AutoRejectGeneratingRoadmapEditRequest(ctx context.Context, arg AutoRejectGeneratingRoadmapEditRequestParams) (RoadmapEditRequest, error) {
+	row := q.db.QueryRow(ctx, autoRejectGeneratingRoadmapEditRequest, arg.ID, arg.AdminNote)
+	var i RoadmapEditRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.SkillID,
+		&i.RequesterID,
+		&i.Rationale,
+		&i.Status,
+		&i.BaseVersionNumber,
+		&i.DraftMilestones,
+		&i.AdminNote,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.CreatedVersionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const cancelRoadmapEditRequest = `-- name: CancelRoadmapEditRequest :one
 UPDATE roadmap_edit_request
 SET status = 'CANCELLED',
