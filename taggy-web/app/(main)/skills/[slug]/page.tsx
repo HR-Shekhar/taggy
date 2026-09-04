@@ -17,7 +17,6 @@ import {
   getRoadmapVersion,
   getSkill,
   getSkillRoadmap,
-  isFreeSkillLimitError,
   joinSkill,
   listMilestones,
   listMyRoadmapEditRequests,
@@ -33,7 +32,6 @@ import {
   PageHeader,
   PageSkeleton,
 } from "@/components/app-ui";
-import { PremiumUpgradePrompt } from "@/components/premium-upgrade";
 import { toastApiError, toastError, toastSuccess } from "@/lib/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -82,7 +80,6 @@ export default function SkillDetailPage() {
   const [progress, setProgress] = useState<ProgressMilestone[] | null>(null);
   const [enrolledVersion, setEnrolledVersion] = useState<number | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [showUpgrade, setShowUpgrade] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [editRationale, setEditRationale] = useState("");
@@ -231,15 +228,10 @@ export default function SkillDetailPage() {
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
-                setShowUpgrade(false);
                 const result = await joinSkill(slug);
                 setBusy(false);
                 if (!result.ok) {
-                  if (isFreeSkillLimitError(result)) {
-                    setShowUpgrade(true);
-                  } else {
-                    toastApiError(result, "Couldn't join skill");
-                  }
+                  toastApiError(result, "Couldn't join skill");
                 } else void load(selectedVersion);
               }}
             >
@@ -252,9 +244,6 @@ export default function SkillDetailPage() {
 
       {pageError ? (
         <ErrorBox message={pageError} title="Couldn't load this skill" />
-      ) : null}
-      {showUpgrade && progress == null ? (
-        <PremiumUpgradePrompt message="limit" />
       ) : null}
 
       {progress != null ? (

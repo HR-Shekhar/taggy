@@ -7,9 +7,9 @@ import { Reveal } from "@/components/marketing/reveal";
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-dvh flex-col overflow-hidden border-b border-border">
+    <section className="relative flex flex-col overflow-hidden border-b border-border pt-16 md:pt-20 lg:pt-24">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--color-primary)_0%,transparent_50%)] opacity-10" />
-      <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 pb-16 pt-16 sm:px-8 sm:pb-20 lg:flex-row lg:justify-between lg:gap-10 lg:px-10 lg:pb-24 lg:pt-20">
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-16 sm:px-8 sm:pb-20 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:px-10 lg:pb-24">
         <Reveal className="max-w-xl space-y-5 lg:w-[42%] lg:shrink-0">
           <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
             <span className="mr-2 flex h-2 w-2 rounded-full bg-primary" />
@@ -50,9 +50,9 @@ export function Hero() {
 
         <Reveal
           delay={200}
-          className="mt-8 flex w-full items-center lg:mt-0 lg:min-h-0 lg:w-[52%] lg:self-stretch"
+          className="mt-12 flex w-full items-center lg:mt-0 lg:w-[52%]"
         >
-          <div className="relative mx-auto w-full max-w-xl">
+          <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
             <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-primary/15 via-transparent to-black/35 blur-2xl" />
             <div
               className="relative overflow-hidden rounded-lg bg-[#1c1c1e]

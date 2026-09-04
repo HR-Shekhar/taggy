@@ -252,12 +252,6 @@ export function friendlyErrorText(raw: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-export function isFreeSkillLimitError(result: ApiResult): boolean {
-  if (result.status !== 409) return false;
-  const msg = apiErrorMessage(result).toLowerCase();
-  return msg.includes("free users") && msg.includes("one active skill");
-}
-
 /** Navigate to Google OAuth. Top-level navigation avoids CORS. */
 export function startGoogleOAuth() {
   window.location.assign(googleStartUrl());

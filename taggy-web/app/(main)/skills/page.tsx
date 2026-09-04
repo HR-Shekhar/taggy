@@ -6,7 +6,6 @@ import { ArrowRight, BookOpen, Route } from "lucide-react";
 import {
   apiErrorMessage,
   createSkillRequest,
-  isFreeSkillLimitError,
   joinSkill,
   listMySkills,
   listSkills,
@@ -23,7 +22,6 @@ import {
   Section,
 } from "@/components/app-ui";
 import { EmptyArtSkills } from "@/components/empty-art";
-import { PremiumUpgradePrompt } from "@/components/premium-upgrade";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -48,7 +46,6 @@ export default function SkillsPage() {
   const [mine, setMine] = useState<MySkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [showUpgrade, setShowUpgrade] = useState(false);
   const [busySlug, setBusySlug] = useState<string | null>(null);
 
   const [reqName, setReqName] = useState("");
@@ -193,7 +190,6 @@ export default function SkillsPage() {
       )}
 
       <Section title="Browse catalog">
-        {showUpgrade ? <PremiumUpgradePrompt message="limit" /> : null}
         {skills.length === 0 ? (
           <Empty
             art={<EmptyArtSkills />}
@@ -244,15 +240,10 @@ export default function SkillsPage() {
                         disabled={busySlug === s.slug}
                         onClick={async () => {
                           setBusySlug(s.slug);
-                          setShowUpgrade(false);
                           const result = await joinSkill(s.slug);
                           setBusySlug(null);
                           if (!result.ok) {
-                            if (isFreeSkillLimitError(result)) {
-                              setShowUpgrade(true);
-                            } else {
-                              toastApiError(result, "Couldn't join skill");
-                            }
+                            toastApiError(result, "Couldn't join skill");
                           } else void load();
                         }}
                       >

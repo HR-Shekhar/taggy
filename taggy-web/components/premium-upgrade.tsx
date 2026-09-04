@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
 
-/** Soft note when free users hit the 1-skill join limit. */
+/** Optional promo for Premium extras (skills are unlimited on Free). */
 export function PremiumUpgradePrompt({
   message,
 }: {
@@ -21,10 +21,10 @@ export function PremiumUpgradePrompt({
           <Sparkles className="size-4" />
         </span>
         <div>
-          <p className="font-medium text-foreground">Free plan limit</p>
+          <p className="font-medium text-foreground">Taggy Premium</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Free accounts can follow one skill at a time. Upgrade for unlimited
-            skills and pods.
+            Support Taggy Premium for extras as they ship. You can already
+            join as many skills as you want.
           </p>
         </div>
       </div>

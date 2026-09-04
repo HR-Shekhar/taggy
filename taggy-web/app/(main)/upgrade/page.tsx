@@ -7,14 +7,13 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const freeFeatures = [
-  "1 active skill",
+  "Multiple skills",
   "Roadmaps & milestones",
   "Pods & community chat",
   "Study streaks & progress",
 ];
 
 const premiumFeatures = [
-  "Unlimited active skills",
   "Everything in Free",
   "Priority skill requests",
   "One-time unlock (coming soon)",
@@ -25,7 +24,7 @@ export default function UpgradePage() {
     <div className="mx-auto max-w-4xl space-y-8">
       <PageHeader
         title="Taggy Premium"
-        description="Follow more skills without hitting the free-plan limit."
+        description="Support Taggy and get extras as they ship."
         backHref="/home"
       />
 
@@ -34,7 +33,7 @@ export default function UpgradePage() {
           <p className="text-sm font-medium text-foreground/75">Free</p>
           <h2 className="mt-1 font-serif text-2xl">Starter</h2>
           <p className="mt-2 text-sm text-foreground/75">
-            Great for focusing on one skill at a time.
+            Join any skills you want and learn at your own pace.
           </p>
           <ul className="mt-6 space-y-2.5">
             {freeFeatures.map((f) => (
@@ -63,8 +62,8 @@ export default function UpgradePage() {
           <p className="text-sm font-medium text-primary">Premium</p>
           <h2 className="mt-1 font-serif text-2xl">Unlimited</h2>
           <p className="mt-2 text-sm text-foreground/75">
-            Billing is finishing up. You&apos;ll unlock unlimited skill
-            enrollments with a one-time purchase.
+            Billing is finishing up. Premium extras will unlock with a
+            one-time purchase.
           </p>
           <ul className="mt-6 space-y-2.5">
             {premiumFeatures.map((f) => (
